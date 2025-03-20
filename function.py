@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 import warnings
 from typing import Any
+from math import exp
 
 warnings.filterwarnings('ignore',category=Warning)
 
@@ -64,7 +65,7 @@ def REG_Loss(model:torch.nn.Module,outputs:torch.Tensor,labels:torch.Tensor,crit
         reg=0
         for name,param in model.named_parameters():
             if 'bias' not in name:
-                decay_factor=lamb/(1+(torch.exp(tau*t)-1)*(torch.abs(param)+epsilon))
+                decay_factor=lamb/(1+(exp(tau*t)-1)*(torch.abs(param)+epsilon))
                 sup_loss=mse_loss(outputs[:,t,...].float(),labels_one_hot)
                 reg+=torch.sum(param**2*decay_factor+(lamb-decay_factor)*sup_loss)
         loss+=label_loss+reg
