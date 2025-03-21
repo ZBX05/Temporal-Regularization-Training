@@ -15,6 +15,7 @@ def main():
     parser=argparse.ArgumentParser(description='Training fully-connected and convolutional spiking neural networks.')
     # Device
     parser.add_argument('--cpu',type=int,default=0,help='Disable CUDA and run on CPU.')
+    parser.add_argument('--gpu',type=int,default=0,help='GPU ID.')
     parser.add_argument('--seed',type=int,default=42)
     # Dataset
     parser.add_argument('--dataset',type=str,choices=['MNIST','FMNIST','CIFAR10','DVSCIFAR10'],default='MNIST',help='Choice of the dataset: MNIST (MNIST), Fashion-MNIST (FMNIST), CIFAR-10 (CIFAR10), CIFAR10-DVS (DVSCIFAR10). Default: MNIST.')
@@ -24,9 +25,9 @@ def main():
     parser.add_argument('--l2',type=float,default=0,help='L2 regularization coefficient. Default: 0.')
     parser.add_argument('--criterion',choices=['MSE','BCE','CE'], default='CE',help='Choice of criterion (loss function) - mean squared error (MSE), binary cross entropy (BCE), cross entropy (CE, which already contains a logsoftmax activation function). Default: MSE.')
     parser.add_argument('--regloss',type=int,default=0,help='Whether to use the Temporal Efficient Training method. Default: False.')
-    parser.add_argument('--loss_tau',type=float,default=5.0,help='Means afctor for Temporal Efficient Training loss function, make all the potential increment around the means. Default: 0.5.')
+    parser.add_argument('--loss_decay',type=float,default=0.5,help='Means afctor for Temporal Efficient Training loss function, make all the potential increment around the means. Default: 0.5.')
     parser.add_argument('--loss_lambda',type=float,default=0.01,help='Lambda factor for Temporal Efficient Training loss function. Default: 0.05.')
-    parser.add_argument('--loss_epsilon',type=float,default=1e-3)
+    parser.add_argument('--loss_epsilon',type=float,default=1e-5)
     parser.add_argument('--loss_means',type=float,default=1.0)
     parser.add_argument('--loss_eta',type=float,default=0.05)
     parser.add_argument('--dropout',type=float,default=0.0,help='Dropout probability (applied only to fully-connected layers). Default: 0.')
@@ -49,7 +50,7 @@ def main():
 
     args=parser.parse_args()
 
-    device=torch.device('cuda') if not args.cpu else torch.device('cpu')
+    device=torch.device(f'cuda:{args.gpu}') if not args.cpu else torch.device('cpu')
     experiment_path=os.path.dirname(os.path.abspath(__file__))+f'/{args.dataset}'
 
     if args.v_reset<0:

@@ -78,9 +78,9 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
     reg_loss=args.regloss
     if reg_loss:
         loss_lambda=args.loss_lambda
-        loss_tau=args.loss_tau
+        loss_decay=args.loss_decay
         loss_epsilon=args.loss_epsilon
-        # loss_eta=args.loss_eta
+        loss_eta=args.loss_eta
         # loss_means=args.loss_means
 
 
@@ -104,7 +104,7 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
                 with torch.amp.autocast(device_type='cuda' if not args.cpu else 'cpu'):
                     if reg_loss:
                         output=model(img,True)
-                        loss=REG_Loss(model,output,labels,criterion,loss_tau,loss_lambda,loss_epsilon)
+                        loss=REG_Loss(model,output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
                         output=output.mean(1)
                     else:
                         output=model(img)
@@ -115,7 +115,7 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
             else:
                 if reg_loss:
                     output=model(img,True)
-                    loss=REG_Loss(output,labels,criterion,loss_tau,loss_lambda,loss_epsilon)
+                    loss=REG_Loss(output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
                     output=output.mean(1)
                 else:
                     output=model(img)

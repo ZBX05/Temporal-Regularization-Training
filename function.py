@@ -53,26 +53,28 @@ class ActFun(torch.autograd.Function):
             raise NameError('Surrogate type '+str(surrogate_type)+' is not supported!')
         return grad_surrogate.float()*grad_input,None,param_grad,None
 
-def REG_Loss(model:torch.nn.Module,outputs:torch.Tensor,labels:torch.Tensor,criterion:Any,tau:float,lamb:float,epsilon:float) -> torch.Tensor:
+def REG_Loss(model:torch.nn.Module,outputs:torch.Tensor,labels:torch.Tensor,criterion:Any,decay:float,lamb:float,epsilon:float,
+             eta:float=0.05) -> torch.Tensor:
     T=outputs.size(1)
     loss=0
     sup_loss=0
-    tau=1/tau
     mse_loss=torch.nn.MSELoss()
     labels_one_hot=F.one_hot(labels,outputs.size(-1)).float()
     for t in range(T):
-        label_loss=criterion(outputs[:,t,...].float(),labels)
         reg=0
+        label_loss=criterion(outputs[:,t,...].float(),labels)
         for name,param in model.named_parameters():
             if 'bias' not in name:
-                decay_factor=lamb/(1+(exp(tau*t)-1)*(torch.abs(param)+epsilon))
-                sup_loss=mse_loss(outputs[:,t,...].float(),labels_one_hot)
-                reg+=torch.sum(param**2*decay_factor+(lamb-decay_factor)*sup_loss)
-        loss+=label_loss+reg
-    loss=loss/T
+                decay_factor=lamb/(1+(exp(decay*t)-1)*(torch.abs(param)+epsilon))
+                reg+=torch.sum(param**2*decay_factor)
+        if eta!=0:
+            sup_loss=mse_loss(outputs[:,t,...].float(),labels_one_hot)
+            # sup_loss+=mse_loss(outputs[:,t,...].float(),labels_one_hot)
+        # loss+=label_loss+reg
+        loss+=(1-eta)*label_loss+eta*sup_loss+reg
     # if eta!=0:
-    #     sup_loss=mse_loss(outputs.float(),torch.zeros_like(outputs).fill_(means))
-    #     loss=(1-eta)*loss+eta*sup_loss
+        # loss=(1-eta)*loss+eta*sup_loss
+    loss=loss/T
     return loss
 
 # def REG_Loss(model:torch.nn.Module,outputs:torch.Tensor,labels:torch.Tensor,criterion:Any,tau:float,lamb:float,epsilon:float,
