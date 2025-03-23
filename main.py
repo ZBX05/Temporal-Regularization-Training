@@ -15,7 +15,8 @@ def main():
     parser=argparse.ArgumentParser(description='Training fully-connected and convolutional spiking neural networks.')
     # Device
     parser.add_argument('--cpu',type=int,default=0,help='Disable CUDA and run on CPU.')
-    parser.add_argument('--gpu',type=int,default=0,help='GPU ID.')
+    parser.add_argument('--parallel',type=int,default=0,help='Whither to use multiple GPUs.')
+    parser.add_argument('--gpu',type=str,default='0',help='GPU ID.')
     parser.add_argument('--seed',type=int,default=42)
     # Dataset
     parser.add_argument('--dataset',type=str,choices=['MNIST','FMNIST','CIFAR10','DVSCIFAR10'],default='MNIST',help='Choice of the dataset: MNIST (MNIST), Fashion-MNIST (FMNIST), CIFAR-10 (CIFAR10), CIFAR10-DVS (DVSCIFAR10). Default: MNIST.')
@@ -50,7 +51,12 @@ def main():
 
     args=parser.parse_args()
 
-    device=torch.device(f'cuda:{args.gpu}') if not args.cpu else torch.device('cpu')
+    if args.parallel:
+        os.environ['CUDA_VISIBLE_DEVICES']=','.join(args.gpu.split('-'))
+        args.gpu=0
+        device=torch.device('cuda')
+    else:
+        device=torch.device(f'cuda:{args.gpu}') if not args.cpu else torch.device('cpu')
     experiment_path=os.path.dirname(os.path.abspath(__file__))+f'/{args.dataset}'
 
     if args.v_reset<0:
@@ -94,6 +100,8 @@ def main():
 
     model=SNN(args.topology,args.T,input_shape,args.dropout,args.norm,args.v_threshold,args.v_reset,args.tau,args.surrogate_type,
               surrogate_param,args.surrogate_m,args.expend_time,args.init)
+    if args.parallel:
+        model=torch.nn.DataParallel(model)
     seed=args.seed
     torch.manual_seed(seed)
     random.seed(seed)
