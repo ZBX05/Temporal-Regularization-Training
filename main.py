@@ -25,14 +25,14 @@ def main():
     parser.add_argument('--optimizer',choices=['SGD','AdamW','Adam','RMSprop'],default='Adam',help='Choice of the optimizer - stochastic gradient descent with 0.9 momentum (SGD), SGD with 0.9 momentum and AdamW (AdamW), Adam (Adam), and RMSprop (RMSprop). Default: AdamW.')
     parser.add_argument('--l2',type=float,default=0,help='L2 regularization coefficient. Default: 0.')
     parser.add_argument('--criterion',choices=['MSE','BCE','CE'], default='CE',help='Choice of criterion (loss function) - mean squared error (MSE), binary cross entropy (BCE), cross entropy (CE, which already contains a logsoftmax activation function). Default: MSE.')
-    parser.add_argument('--regloss',type=int,default=0,help='Whether to use the Temporal Efficient Training method. Default: False.')
+    parser.add_argument('--regloss',type=int,default=1,help='Whether to use the Temporal Efficient Training method. Default: False.')
     parser.add_argument('--loss_decay',type=float,default=0.5,help='Means afctor for Temporal Efficient Training loss function, make all the potential increment around the means. Default: 0.5.')
-    parser.add_argument('--loss_lambda',type=float,default=0.01,help='Lambda factor for Temporal Efficient Training loss function. Default: 0.05.')
+    parser.add_argument('--loss_lambda',type=float,default=1e-5,help='Lambda factor for Temporal Efficient Training loss function. Default: 0.00001.')
     parser.add_argument('--loss_epsilon',type=float,default=1e-5)
     parser.add_argument('--loss_means',type=float,default=1.0)
     parser.add_argument('--loss_eta',type=float,default=0.05)
     parser.add_argument('--dropout',type=float,default=0.0,help='Dropout probability (applied only to fully-connected layers). Default: 0.')
-    parser.add_argument('--epochs',type=int,default=100,help='Number of training epochs Default: 100.')
+    parser.add_argument('--epochs',type=int,default=300,help='Number of training epochs Default: 300.')
     parser.add_argument('--batch_size',type=int,default=64,help='Input batch size for training. Default: 256.')
     parser.add_argument('--lr',type=float,default=1e-3,help='Learning rate. Default: 1e-3.')
     parser.add_argument('--scheduler',type=int,default=1,help='Whether to use a learning rate scheduler (CosineAnnealingLR). Default: False.')
@@ -52,8 +52,8 @@ def main():
     args=parser.parse_args()
 
     if args.parallel:
-        os.environ['CUDA_VISIBLE_DEVICES']=','.join(args.gpu.split('-'))
-        args.gpu=0
+        gpus=args.gpu.split('-')
+        os.environ['CUDA_VISIBLE_DEVICES']=gpus[0] if len(gpus)==1 else ','.join(args.gpu.split('-'))
         device=torch.device('cuda')
     else:
         device=torch.device(f'cuda:{args.gpu}') if not args.cpu else torch.device('cpu')
