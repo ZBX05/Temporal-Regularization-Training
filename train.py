@@ -114,9 +114,12 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
                         output=model(img)
                         loss=criterion(output,labels)
                         if weight_decay:
-                            norm=lambda x:torch.sum(torch.sqrt(x**2)) if decay_dict["type"]=='l2' else torch.sum(torch.abs(x))
+                            if decay_dict["type"]=='l1':
+                                norm=lambda x:torch.sum(torch.abs(x))
+                            elif decay_dict["type"]=='l2':
+                                norm=lambda x:torch.sum(x**2)
                             for name,param in model.named_parameters():
-                                if 'bias' not in name:
+                                if 'weight' in name:
                                     loss+=decay_dict["decay"]*norm(param)
                     scaler.scale(loss.mean()).backward()
                     scaler.step(optimizer)
@@ -130,9 +133,12 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
                     output=model(img)
                     loss=criterion(output,labels)
                     if weight_decay:
-                        norm=lambda x:x.pow(2).sum().sqrt() if decay_dict["type"]=='l2' else x.abs().sum()
+                        if decay_dict["type"]=='l1':
+                            norm=lambda x:torch.sum(torch.abs(x))
+                        elif decay_dict["type"]=='l2':
+                            norm=lambda x:torch.sum(x**2)
                         for name,param in model.named_parameters():
-                            if 'bias' not in name:
+                            if 'weight' in name:
                                 loss+=decay_dict["decay"]*norm(param)
                 loss.mean().backward()
                 optimizer.step()
