@@ -46,13 +46,13 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
     epochs=args.epochs
 
     if args.optimizer=='SGD':
-            optimizer=SGD(model.parameters(),lr=args.lr,momentum=0.9,nesterov=False,weight_decay=args.l2)
+            optimizer=SGD(model.parameters(),lr=args.lr,momentum=0.9,nesterov=False)
     elif args.optimizer=='AdamW':
-            optimizer=AdamW(model.parameters(),lr=args.lr,weight_decay=args.l2)
+            optimizer=AdamW(model.parameters(),lr=args.lr)
     elif args.optimizer=='Adam':
-            optimizer=Adam(model.parameters(),lr=args.lr,weight_decay=args.l2)
+            optimizer=Adam(model.parameters(),lr=args.lr)
     elif args.optimizer=='RMSprop':
-            optimizer=RMSprop(model.parameters(),lr=args.lr,weight_decay=args.l2)
+            optimizer=RMSprop(model.parameters(),lr=args.lr)
     else:
         raise NameError('Optimizer '+str(args.optimizer)+' not supported!')
     
@@ -82,7 +82,11 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
         loss_epsilon=args.loss_epsilon
         loss_eta=args.loss_eta
         # loss_means=args.loss_means
-
+    
+    weight_decay=False
+    if args.weight_decay is not None:
+        weight_decay=True
+        decay_dict=args.weight_decay
 
     best_test_acc=0
     best_test_loss=0
@@ -109,6 +113,11 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
                     else:
                         output=model(img)
                         loss=criterion(output,labels)
+                        if weight_decay:
+                            norm=lambda x:torch.sum(torch.sqrt(x**2)) if decay_dict["type"]=='l2' else torch.sum(torch.abs(x))
+                            for name,param in model.named_parameters():
+                                if 'bias' not in name:
+                                    loss+=decay_dict["decay"]*norm(param)
                     scaler.scale(loss.mean()).backward()
                     scaler.step(optimizer)
                     scaler.update()
@@ -120,6 +129,11 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
                 else:
                     output=model(img)
                     loss=criterion(output,labels)
+                    if weight_decay:
+                        norm=lambda x:x.pow(2).sum().sqrt() if decay_dict["type"]=='l2' else x.abs().sum()
+                        for name,param in model.named_parameters():
+                            if 'bias' not in name:
+                                loss+=decay_dict["decay"]*norm(param)
                 loss.mean().backward()
                 optimizer.step()
             train_samples+=labels.size(0)

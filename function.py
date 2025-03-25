@@ -66,7 +66,7 @@ def REG_Loss(model:torch.nn.Module,outputs:torch.Tensor,labels:torch.Tensor,crit
         for name,param in model.named_parameters():
             if 'bias' not in name:
                 decay_factor=lamb/(1+(exp(decay*t)-1)*(torch.abs(param)+epsilon))
-                reg+=torch.sum(param**2*decay_factor)
+                reg+=torch.sqrt(torch.sum(param**2*decay_factor**2))
         if eta!=0:
             sup_loss=mse_loss(outputs[:,t,...].float(),labels_one_hot)
             # sup_loss+=mse_loss(outputs[:,t,...].float(),labels_one_hot)

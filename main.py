@@ -23,6 +23,7 @@ def main():
     parser.add_argument('--augment',type=int,default=1,help='Whether to use data augmentation for CIFAR-10 and CIFAR10-DVS. Default: True.')
     #Training
     parser.add_argument('--optimizer',choices=['SGD','AdamW','Adam','RMSprop'],default='Adam',help='Choice of the optimizer - stochastic gradient descent with 0.9 momentum (SGD), SGD with 0.9 momentum and AdamW (AdamW), Adam (Adam), and RMSprop (RMSprop). Default: AdamW.')
+    parser.add_argument('--l1',type=float,default=0,help='L1 regularization coefficient. Default: 0.')
     parser.add_argument('--l2',type=float,default=0,help='L2 regularization coefficient. Default: 0.')
     parser.add_argument('--criterion',choices=['MSE','BCE','CE'], default='CE',help='Choice of criterion (loss function) - mean squared error (MSE), binary cross entropy (BCE), cross entropy (CE, which already contains a logsoftmax activation function). Default: MSE.')
     parser.add_argument('--regloss',type=int,default=1,help='Whether to use the Temporal Efficient Training method. Default: False.')
@@ -97,6 +98,14 @@ def main():
         assert 0<=args.surrogate_m<=1.0,'m indicates the probability of the spike mask, must be in [0,1].' 
     assert args.tau>1,'tau must be greater than 1.0.'
     assert not(args.regloss and args.criterion=='MSE'),'MSE is not supported in TET.'
+
+    args.weight_decay=None
+    if args.l1!=0 and args.l2!=0:
+        raise ValueError('Only one type of weight decay can be used in one experiment!')
+    if args.l1:
+        args.weight_decay={"type":'l1',"decay":args.l1}
+    elif args.l2:
+        args.weight_decay={"type":'l2',"decay":args.l2}
 
     model=SNN(args.topology,args.T,input_shape,args.dropout,args.norm,args.v_threshold,args.v_reset,args.tau,args.surrogate_type,
               surrogate_param,args.surrogate_m,args.expend_time,args.init)
