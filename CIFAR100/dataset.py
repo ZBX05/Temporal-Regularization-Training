@@ -40,16 +40,16 @@ def get_dataset(root_path:str,augment:bool=False) -> tuple[datasets.CIFAR100,dat
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         Cutout(n_holes=1,length=16),
-        transforms.Normalize((0.4914,0.4822,0.4465),(0.2023,0.1994,0.2010))
+        transforms.Normalize((0.5071,0.4867,0.4408),(0.2675,0.2565,0.2761))
     ]) if augment else transforms.Compose([
         transforms.RandomCrop(32,padding=4),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
-        transforms.Normalize((0.4914,0.4822,0.4465),(0.2023,0.1994,0.2010))
+        transforms.Normalize((0.5071,0.4867,0.4408),(0.2675,0.2565,0.2761))
     ])
     test_transform=transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.4914,0.4822,0.4465),(0.2023,0.1994,0.2010))
+        transforms.Normalize((0.5071,0.4867,0.4408),(0.2675,0.2565,0.2761))
     ])
     train_data=datasets.CIFAR100(root=root_path,train=True,transform=train_transform,download=True)
     test_data=datasets.CIFAR100(root=root_path,train=False,transform=test_transform,download=True)
