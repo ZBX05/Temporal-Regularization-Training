@@ -11,6 +11,9 @@ def get_data(path:str,dataset:str,augment:bool=False) -> tuple[Any,Any]:
     elif dataset=='CIFAR10':
         import CIFAR10.dataset
         train_data,test_data=CIFAR10.dataset.get_dataset(path,augment)
+    elif dataset=='CIFAR100':
+        import CIFAR100.dataset
+        train_data,test_data=CIFAR100.dataset.get_dataset(path,augment)
     elif dataset=='DVSCIFAR10':
         import DVSCIFAR10.dataset
         train_data,test_data=DVSCIFAR10.dataset.get_dataset(path,augment)
@@ -35,6 +38,12 @@ def load_dataset_fmnist(path:str,batch_size:int,shuffle:bool) -> tuple[DataLoade
 
 def load_dataset_cifar10(augment:bool,path:str,batch_size:int,shuffle:bool) -> tuple[DataLoader,DataLoader,tuple[int,int,int]]:
     train_data,test_data=get_data(path,'CIFAR10',augment)
+    train_loader,test_loader=get_dataloader(train_data,test_data,batch_size,shuffle)
+    data_shape=(3,32,32)
+    return train_loader,test_loader,data_shape
+
+def load_dataset_cifar100(augment:bool,path:str,batch_size:int,shuffle:bool) -> tuple[DataLoader,DataLoader,tuple[int,int,int]]:
+    train_data,test_data=get_data(path,'CIFAR100',augment)
     train_loader,test_loader=get_dataloader(train_data,test_data,batch_size,shuffle)
     data_shape=(3,32,32)
     return train_loader,test_loader,data_shape

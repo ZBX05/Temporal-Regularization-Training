@@ -19,7 +19,7 @@ def main():
     parser.add_argument('--gpu',type=str,default='0',help='GPU ID.')
     parser.add_argument('--seed',type=int,default=42)
     # Dataset
-    parser.add_argument('--dataset',type=str,choices=['MNIST','FMNIST','CIFAR10','DVSCIFAR10'],default='MNIST',help='Choice of the dataset: MNIST (MNIST), Fashion-MNIST (FMNIST), CIFAR-10 (CIFAR10), CIFAR10-DVS (DVSCIFAR10). Default: MNIST.')
+    parser.add_argument('--dataset',type=str,choices=['MNIST','FMNIST','CIFAR10','CIFAR100','DVSCIFAR10'],default='MNIST',help='Choice of the dataset: MNIST (MNIST), Fashion-MNIST (FMNIST), CIFAR-10 (CIFAR10), CIFAR10-DVS (DVSCIFAR10). Default: MNIST.')
     parser.add_argument('--augment',type=int,default=1,help='Whether to use data augmentation for CIFAR-10 and CIFAR10-DVS. Default: True.')
     #Training
     parser.add_argument('--optimizer',choices=['SGD','AdamW','Adam','RMSprop'],default='Adam',help='Choice of the optimizer - stochastic gradient descent with 0.9 momentum (SGD), SGD with 0.9 momentum and AdamW (AdamW), Adam (Adam), and RMSprop (RMSprop). Default: AdamW.')
@@ -80,6 +80,13 @@ def main():
         if args.topology=='ResNet-19':
             args.model='ResNet-19'
             args.topology='CONVNP-64-3-1-1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-256-3=3-2=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-512-3=3-2=1-1=1_RES-512-3=3-1=1-1=1-_FC-256_L-10'
+    elif args.dataset=='CIFAR100':
+        train_data_loader,test_data_loader,input_shape=load_dataset_cifar100(args.augment,experiment_path+'/data',args.batch_size,True)
+        args.label_size=100
+        args.expend_time=True
+        if args.topology=='ResNet-19':
+            args.model='ResNet-19'
+            args.topology='CONVNP-64-3-1-1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-256-3=3-2=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-512-3=3-2=1-1=1_RES-512-3=3-1=1-1=1-_FC-256_L-100'
     elif args.dataset=='DVSCIFAR10':
         train_data_loader,test_data_loader,input_shape=load_dataset_dvscifar10(args.augment,experiment_path+'/data',args.batch_size,True)
         args.label_size=10
