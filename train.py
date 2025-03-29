@@ -1,6 +1,8 @@
 import os
 import torch
-from torch.amp import GradScaler as GradScaler
+import torch_npu
+from torch_npu.npu.amp import GradScaler as GradScaler
+from torch_npu.contrib import transfer_to_npu
 from torch.optim import AdamW,Adam,SGD,RMSprop
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import torch.nn.functional as F

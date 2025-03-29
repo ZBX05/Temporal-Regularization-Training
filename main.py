@@ -15,8 +15,8 @@ def main():
     parser=argparse.ArgumentParser(description='Training fully-connected and convolutional spiking neural networks.')
     # Device
     parser.add_argument('--cpu',type=int,default=0,help='Disable CUDA and run on CPU.')
-    parser.add_argument('--parallel',type=int,default=0,help='Whither to use multiple GPUs.')
-    parser.add_argument('--gpu',type=str,default='0',help='GPU(s) ID. When using parallel training, the IDs must be specified as a string of comma-separated integers, like 0-1-2-3. Default: 0.')
+    parser.add_argument('--parallel',type=int,default=0,help='Whither to use multiple NPUs.')
+    parser.add_argument('--npu',type=str,default='0',help='NPU(s) ID. When using parallel training, the IDs must be specified as a string of comma-separated integers, like 0-1-2-3. Default: 0.')
     parser.add_argument('--seed',type=int,default=42)
     # Dataset
     parser.add_argument('--dataset',type=str,choices=['MNIST','FMNIST','CIFAR10','CIFAR100','DVSCIFAR10'],default='MNIST',help='Choice of the dataset: MNIST (MNIST), Fashion-MNIST (FMNIST), CIFAR-10 (CIFAR10), CIFAR10-DVS (DVSCIFAR10). Default: MNIST.')
@@ -53,11 +53,13 @@ def main():
     args=parser.parse_args()
 
     if args.parallel:
-        gpus=args.gpu.split('-')
-        os.environ['CUDA_VISIBLE_DEVICES']=gpus[0] if len(gpus)==1 else ','.join(args.gpu.split('-'))
+        # npus=args.npu.split('-')
+        # os.environ['CUDA_VISIBLE_DEVICES']=npus[0] if len(npus)==1 else ','.join(args.npu.split('-'))
+        # device=torch.device('npu')
         device=torch.device('cuda')
     else:
-        device=torch.device(f'cuda:{args.gpu}') if not args.cpu else torch.device('cpu')
+        # device=torch.device(f'npu:{args.gpu}') if not args.cpu else torch.device('cpu')
+        device=torch.device(f'cuda:{args.npu}') if not args.cpu else torch.device('cpu')
     experiment_path=os.path.dirname(os.path.abspath(__file__))+f'/{args.dataset}'
 
     if args.v_reset<0:
