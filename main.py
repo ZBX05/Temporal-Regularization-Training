@@ -16,7 +16,7 @@ def main():
     # Device
     parser.add_argument('--cpu',type=int,default=0,help='Disable CUDA and run on CPU.')
     parser.add_argument('--parallel',type=int,default=0,help='Whither to use multiple GPUs.')
-    parser.add_argument('--gpu',type=str,default='0',help='GPU ID.')
+    parser.add_argument('--gpu',type=str,default='0',help='GPU(s) ID. When using parallel training, the IDs must be specified as a string of comma-separated integers, like 0-1-2-3. Default: 0.')
     parser.add_argument('--seed',type=int,default=42)
     # Dataset
     parser.add_argument('--dataset',type=str,choices=['MNIST','FMNIST','CIFAR10','CIFAR100','DVSCIFAR10'],default='MNIST',help='Choice of the dataset: MNIST (MNIST), Fashion-MNIST (FMNIST), CIFAR-10 (CIFAR10), CIFAR10-DVS (DVSCIFAR10). Default: MNIST.')
