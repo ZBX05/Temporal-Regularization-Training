@@ -1,8 +1,6 @@
 import torch
 from neuron import *
 import torch.nn as nn
-from torch.nn import functional as F
-import numpy as np
 
 class SeqToANNContainer(nn.Module):
     # This code is form spikingjelly https://github.com/fangwei123456/spikingjelly.

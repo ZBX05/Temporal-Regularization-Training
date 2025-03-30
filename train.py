@@ -1,6 +1,6 @@
 import os
 import torch
-from torch.amp import GradScaler as GradScaler
+from torch.amp import GradScaler
 from torch.optim import AdamW,Adam,SGD,RMSprop
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import torch.nn.functional as F
