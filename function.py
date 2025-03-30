@@ -76,28 +76,3 @@ def REG_Loss(model:torch.nn.Module,outputs:torch.Tensor,labels:torch.Tensor,crit
         # loss=(1-eta)*loss+eta*sup_loss
     loss=loss/T
     return loss
-
-# def REG_Loss(model:torch.nn.Module,outputs:torch.Tensor,labels:torch.Tensor,criterion:Any,tau:float,lamb:float,epsilon:float,
-#          eta:float=0.05) -> torch.Tensor:
-#     T=outputs.size(1)
-#     loss=0
-#     sup_loss=0
-#     # sup_loss=0
-#     tau=1/tau
-#     mse_loss=torch.nn.MSELoss()
-#     labels_one_hot=F.one_hot(labels,outputs.size(-1)).float()
-#     for t in range(T):
-#         label_loss=criterion(outputs[:,t,...].float(),labels)
-#         for param in model.parameters():
-#             reg=0
-#             if param.dim()>1:
-#                 decay_factor=lamb/torch.exp(tau*t*(torch.abs(param)+epsilon))
-#                 reg+=torch.sum(param**2*decay_factor)
-#         if eta!=0:
-#             sup_loss=mse_loss(outputs[:,t,...].float(),labels_one_hot)
-#         loss+=(1-eta)*label_loss+eta*sup_loss+reg
-#     loss=loss/T
-#     # if eta!=0:
-#     #     sup_loss=mse_loss(outputs.float(),torch.zeros_like(outputs).fill_(means))
-#     #     loss=(1-eta)*loss+eta*sup_loss
-#     return loss

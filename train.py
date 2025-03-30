@@ -75,6 +75,7 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
     amp=False
     if args.amp:
          amp=True
+        #  scaler=GradScaler(device='npu' if not args.cpu else 'cpu')
          scaler=GradScaler(device='cuda' if not args.cpu else 'cpu')
     
     reg_loss=args.regloss
@@ -107,6 +108,7 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
             labels=labels.to(device)
             optimizer.zero_grad()
             if amp:
+                # with torch.amp.autocast(device_type='npu' if not args.cpu else 'cpu'):
                 with torch.amp.autocast(device_type='cuda' if not args.cpu else 'cpu'):
                     if reg_loss:
                         output=model(img,True)
