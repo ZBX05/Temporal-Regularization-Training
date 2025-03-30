@@ -26,16 +26,6 @@ class BaseBlock(nn.Module):
         if hasattr(self,'lif'):
             self.lif.reset()
 
-    # def set_t_layer_parameters(self,layer:nn.Module,lc_ampl:float) -> None:
-    #     stdv=lc_ampl/np.sqrt(layer.weight.size(1))
-    #     layer.weight.data.uniform_(-stdv,stdv)
-    #     self.set_t_layer_bias_parameters(layer,lc_ampl)
-
-    # def set_t_layer_bias_parameters(self,layer:nn.Module,lc_ampl:float) -> None:
-    #     stdv=lc_ampl/np.sqrt(layer.weight.size(1))
-    #     if layer.bias is not None:
-    #         layer.bias.data.uniform_(-stdv,stdv)
-
 class BatchNorm2dBlock(BaseBlock):
     def __init__(self,num_features:int) -> None:
         super(BatchNorm2dBlock,self).__init__()

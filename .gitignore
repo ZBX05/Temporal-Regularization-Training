@@ -2,7 +2,7 @@ __pycache__
 *.pth
 data
 test.py
-SpikingNeuralNetworkFrame.code-workspace
+REG_Loss.code-workspace
 script.md
 script.ipynb
 .ipynb_checkpoints

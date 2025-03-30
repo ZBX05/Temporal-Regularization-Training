@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from module import *
-from typing import Any
 
 class SNN(nn.Module):
     def __init__(self,topology:str,T:int,input_shape:tuple,dropout:float,norm:str,v_threshold:float,v_reset:float,tau:float,
