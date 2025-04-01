@@ -8,3 +8,5 @@ script.ipynb
 .ipynb_checkpoints
 result
 __model.py
+__neuron.py
+.gitignore

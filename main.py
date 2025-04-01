@@ -19,7 +19,7 @@ def main():
     parser.add_argument('--gpu',type=str,default='0',help='GPU(s) ID. When using parallel training, the IDs must be specified as a string of comma-separated integers, like 0-1-2-3. Default: 0.')
     parser.add_argument('--seed',type=int,default=42)
     # Dataset
-    parser.add_argument('--dataset',type=str,choices=['MNIST','FMNIST','CIFAR10','CIFAR100','DVSCIFAR10'],default='MNIST',help='Choice of the dataset: MNIST (MNIST), Fashion-MNIST (FMNIST), CIFAR-10 (CIFAR10), CIFAR10-DVS (DVSCIFAR10). Default: MNIST.')
+    parser.add_argument('--dataset',type=str,choices=['MNIST','FMNIST','CIFAR10','CIFAR100','DVSCIFAR10','ImageNet'],default='MNIST',help='Choice of the dataset: MNIST (MNIST), Fashion-MNIST (FMNIST), CIFAR-10 (CIFAR10), CIFAR10-DVS (DVSCIFAR10). Default: MNIST.')
     parser.add_argument('--augment',type=int,default=1,help='Whether to use data augmentation for CIFAR-10 and CIFAR10-DVS. Default: True.')
     #Training
     parser.add_argument('--optimizer',choices=['SGD','AdamW','Adam','RMSprop'],default='Adam',help='Choice of the optimizer - stochastic gradient descent with 0.9 momentum (SGD), SGD with 0.9 momentum and AdamW (AdamW), Adam (Adam), and RMSprop (RMSprop). Default: AdamW.')
@@ -38,7 +38,7 @@ def main():
     parser.add_argument('--lr',type=float,default=1e-3,help='Learning rate. Default: 1e-3.')
     parser.add_argument('--scheduler',type=int,default=1,help='Whether to use a learning rate scheduler (CosineAnnealingLR). Default: False.')
     parser.add_argument('--amp',type=int,default=1)
-    # Network 'CONV_32_5_1_2_FC_seed_FC_10'
+    # Network 'CONV_32_5_1_2_FC_1000_FC_10'
     parser.add_argument('--init',type=int,default=1)
     parser.add_argument('--topology',type=str,default='CONV-28-5-1-2_FC-1000_FC-10',help='Choice of network topology. Format for convolutional layers: CONV_{output channels}-{kernel size}-{stride}-{padding}. Format for fully-connected layers: FC-{output units}.')
     parser.add_argument('--norm',type=str,choices=['tdBN','No'],default='tdBN',help='Choice of normalization method - batch normalization (BN), temporal decoupled batch normalization (tdBN). Default: BN.')
@@ -46,9 +46,9 @@ def main():
     parser.add_argument('--v_threshold',type=float,default=1.0,help='Threshold potential for spiking neurons. Default: 0.5.')
     parser.add_argument('--v_reset',type=float,default=0.0,help='Reset potential for spiking neurons. Default: 0.')
     parser.add_argument('--tau',type=float,default=2.0,help='Time constant for spiking neurons, decay factor equals to 1/tau. Default: 5.0')
-    parser.add_argument('--surrogate_type',choices=['sigmoid','zo','pseudo','triangle','asgl'],default='sigmoid',help='Choice of surrogate function for spiking neurons - sigmoid (sigmoid), dynamic zeroth order method (dzo), zeroth order method (zo), and pseudo-bp (pseudo). Default: dzo.')
+    parser.add_argument('--surrogate_type',choices=['sigmoid','zo','pseudo','triangle','asgl'],default='triangle',help='Choice of surrogate function for spiking neurons - sigmoid (sigmoid), dynamic zeroth order method (dzo), zeroth order method (zo), and pseudo-bp (pseudo). Default: dzo.')
     parser.add_argument('--surrogate_m',type=float,default=5)
-    parser.add_argument('--surrogate_param',type=float,default=2.0)
+    parser.add_argument('--surrogate_param',type=float,default=1.0)
 
     args=parser.parse_args()
 
@@ -79,21 +79,32 @@ def main():
         args.expend_time=True
         if args.topology=='ResNet-19':
             args.model='ResNet-19'
-            args.topology='CONVNP-64-3-1-1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-256-3=3-2=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-512-3=3-2=1-1=1_RES-512-3=3-1=1-1=1-_FC-256_L-10'
+            args.topology=f'CONVNP-64-3-1-1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-256-3=3-2=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-512-3=3-2=1-1=1_RES-512-3=3-1=1-1=1-_FC-256_L-{args.label_size}'
     elif args.dataset=='CIFAR100':
         train_data_loader,test_data_loader,input_shape=load_dataset_cifar100(args.augment,experiment_path+'/data',args.batch_size,True)
         args.label_size=100
         args.expend_time=True
         if args.topology=='ResNet-19':
             args.model='ResNet-19'
-            args.topology='CONVNP-64-3-1-1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-256-3=3-2=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-512-3=3-2=1-1=1_RES-512-3=3-1=1-1=1-_FC-256_L-100'
+            args.topology=f'CONVNP-64-3-1-1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-256-3=3-2=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-512-3=3-2=1-1=1_RES-512-3=3-1=1-1=1-_FC-256_L-{args.label_size}'
     elif args.dataset=='DVSCIFAR10':
         train_data_loader,test_data_loader,input_shape=load_dataset_dvscifar10(args.augment,experiment_path+'/data',args.batch_size,True)
         args.label_size=10
         args.expend_time=False
         if args.topology=='VGGSNN':
             args.model='VGGSNN'
-            args.topology='CONVNP-64-3-1-1_CONVAP-128-3-1-1_CONVNP-256-3-1-1_CONVAP-256-3-1-1_CONVNP-512-3-1-1_CONVAP-512-3-1-1_CONVNP-512-3-1-1_CONVAP-512-3-1-1_L-10'
+            args.topology=f'CONVNP-64-3-1-1_CONVAP-128-3-1-1_CONVNP-256-3-1-1_CONVAP-256-3-1-1_CONVNP-512-3-1-1_CONVAP-512-3-1-1_CONVNP-512-3-1-1_CONVAP-512-3-1-1_L-{args.label_size}'
+    elif args.dataset=='ImageNet':
+        train_data_loader,test_data_loader,input_shape=load_dataset_imagenet(experiment_path+'/data',args.batch_size,True)
+        args.label_size=1000
+        args.expend_time=True
+        if args.topology=='ResNet-19':
+            args.model='ResNet-19'
+            args.topology=f'CONV-64-7-2-3-3-2-1_RES-64-3=3-1=1-1=1_RES-64-3=3-1=1-1=1_RES-128-3=3-2=1-1=1_RES-128-3=3-1=1-1=1_RES-256-3=3-2=1-1=1_RES-256-3=3-1=1-1=1_RES-512-3=3-2=1-1=1_RES-512-3=3-1=1-1=1-_FC-256_L-{args.label_size}'
+        elif args.topology=='SEW-ResNet-34':
+            args.expend_time=False
+            args.model='SEW-ResNet-34'
+            args.topology=f'L-{args.label_size}' # TODO: Complete the topology of SEW-ResNet-34.
     else:
         raise ValueError('Unsupported dataset: '+args.dataset+'.')
 

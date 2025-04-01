@@ -18,6 +18,15 @@ class SeqToANNContainer(nn.Module):
         y_shape.extend(y_seq.shape[1:])
         return y_seq.view(y_shape)
 
+class TimeExpensionBlock(nn.Module):
+    def __init__(self,T:int,dimension:int) -> None:
+        super(TimeExpensionBlock,self).__init__()
+        self.T=T
+        self.dimension=dimension
+    
+    def forward(self,input:torch.Tensor) -> torch.Tensor:
+        return input.unsqueeze(self.dimension).repeat_interleave(self.T,self.dimension)
+
 class BaseBlock(nn.Module):
     def __init__(self) -> None:
         super(BaseBlock,self).__init__()
@@ -53,8 +62,8 @@ class FCBlock(BaseBlock):
         self.fc=SeqToANNContainer(
             nn.Linear(input_size,output_size,bias=bias)
         )
-        self.lif=LIFNode(shape=(output_size,),v_threshold=v_threshold,v_reset=v_reset,tau=tau,surrogate_type=surrogate_type,
-                         surrogate_param=surrogate_param,surrogate_m=surrogate_m)
+        self.lif=LIFNode(v_threshold=v_threshold,v_reset=v_reset,tau=tau,surrogate_type=surrogate_type,surrogate_param=surrogate_param,
+                         surrogate_m=surrogate_m)
         if dropout!=0:
             self.dropout=nn.Dropout(p=dropout)
         else:
@@ -102,8 +111,8 @@ class Conv2dBlock(BaseBlock):
         self.conv2d_output_height=self.get_conv2d_output_dim(input_height)
         self.conv2d_output_width=self.get_conv2d_output_dim(input_width)
         self.output_height,self.output_width=self.get_conv2d_block_output_dim(input_height,input_width)
-        self.lif=LIFNode(shape=(out_channels,1,1),v_threshold=v_threshold,v_reset=v_reset,
-                         tau=tau,surrogate_type=surrogate_type,surrogate_param=surrogate_param,surrogate_m=surrogate_m)
+        self.lif=LIFNode(v_threshold=v_threshold,v_reset=v_reset,tau=tau,surrogate_type=surrogate_type,surrogate_param=surrogate_param,
+                         surrogate_m=surrogate_m)
     
     def forward(self,input:torch.Tensor) -> torch.Tensor:
         x=self.conv2d_layer(input)
@@ -163,6 +172,32 @@ class Conv2dNoPoolingBlock(Conv2dBlock):
         output=self.lif(x)
         return output
 
+class Conv2dEncoderBlock(Conv2dBlock):
+    def __init__(self,T:int,norm:str,input_shape:tuple,in_channels:int,out_channels:int,conv_kernel_size:int,conv_stride:int,conv_padding:int,
+                 pool_kernel_size:int,pool_stride:int,pool_padding:int,bias:bool,v_threshold:float=1.0,v_reset:float=0.0,tau:float=5,
+                 surrogate_type:str='sigmoid',surrogate_param:float=2.0,surrogate_m:int=5) -> None:
+        super(Conv2dEncoderBlock,self).__init__(norm,input_shape,in_channels,out_channels,conv_kernel_size,conv_stride,conv_padding,
+                                                pool_kernel_size,pool_stride,pool_padding,bias,v_threshold,v_reset,tau,surrogate_type,
+                                                surrogate_param,surrogate_m)
+        self.time_expension_layer=TimeExpensionBlock(T,1)
+        if self.norm=='tdBN':
+            self.conv2d_layer=nn.Sequential(
+                nn.Conv2d(in_channels,out_channels,conv_kernel_size,conv_stride,conv_padding,bias=bias),
+                nn.BatchNorm2d(out_channels),
+            )
+        else:
+            self.conv2d_layer=nn.Conv2d(in_channels,out_channels,conv_kernel_size,conv_stride,conv_padding,bias=bias)
+        self.maxpool2d_layer=SeqToANNContainer(
+            nn.MaxPool2d(pool_kernel_size,pool_stride,pool_padding)
+        )
+
+    def forward(self,input:torch.Tensor) -> torch.Tensor:
+        x=self.conv2d_layer(input)
+        x=self.time_expension_layer(input)
+        x=self.lif(x)
+        output=self.maxpool2d_layer(x)
+        return output
+
 class ResidualBlock(BaseBlock):
     def __init__(self,norm:str,input_shape:tuple,in_channels:int,out_channels:int,conv_kernel_size:tuple,conv_stride:tuple,conv_padding:tuple,
                  pool:bool,downsample:bool,bias:bool,v_threshold:float=1.0,v_reset:float=0.0,tau:float=5,surrogate_type:str='sigmoid',
@@ -213,17 +248,10 @@ class ResidualBlock(BaseBlock):
             self.adaptive_avgpool_layer=SeqToANNContainer(
                 nn.AdaptiveAvgPool2d((1,1))
             )
-        # conv_1_output_height=self.get_conv2d_output_dim(input_height,conv_kernel_size[0],conv_stride[0],conv_padding[0])
-        # conv_1_output_width=self.get_conv2d_output_dim(input_width,conv_kernel_size[0],conv_stride[0],conv_padding[0])
-        # conv_2_output_height=self.get_conv2d_output_dim(conv_1_output_height,conv_kernel_size[1],conv_stride[1],conv_padding[1])
-        # conv_2_output_width=self.get_conv2d_output_dim(conv_1_output_width,conv_kernel_size[1],conv_stride[1],conv_padding[1])
-        # shape_1=(out_channels,conv_1_output_height,conv_1_output_width)
-        # shape_2=(out_channels,conv_2_output_height,conv_2_output_width)
-        self.lif_1=LIFNode(shape=(out_channels,1,1),v_threshold=v_threshold,v_reset=v_reset,tau=tau,surrogate_type=surrogate_type,
-                           surrogate_param=surrogate_param,surrogate_m=surrogate_m)
-        self.lif_2=LIFNode(shape=(out_channels,1,1),v_threshold=v_threshold,v_reset=v_reset,tau=tau,surrogate_type=surrogate_type,
-                           surrogate_param=surrogate_param,surrogate_m=surrogate_m)
-    
+        self.lif_1=LIFNode(v_threshold=v_threshold,v_reset=v_reset,tau=tau,surrogate_type=surrogate_type,surrogate_param=surrogate_param,
+                           surrogate_m=surrogate_m)
+        self.lif_2=LIFNode(v_threshold=v_threshold,v_reset=v_reset,tau=tau,surrogate_type=surrogate_type,surrogate_param=surrogate_param,
+                           surrogate_m=surrogate_m)
     
     def forward(self,input:torch.Tensor) -> torch.Tensor:
         identity=input
@@ -256,7 +284,51 @@ class ResidualBlock(BaseBlock):
         stride=self.conv_stride[1]
         output_height=(input_height+2*padding-kernel_size)//stride+1
         output_width=(input_width+2*padding-kernel_size)//stride+1
-        return output_height,output_width 
+        return output_height,output_width
+
+class SEWResidualBlock(ResidualBlock):
+    def __init__(self,connect_function:str,norm:str,input_shape:tuple,in_channels:int,out_channels:int,conv_kernel_size:tuple,conv_stride:tuple,
+                 conv_padding:tuple,pool:bool,downsample:bool,bias:bool,v_threshold:float=1.0,v_reset:float=0.0,tau:float=5,
+                 surrogate_type:str='sigmoid',surrogate_param:float=2.0,surrogate_m:int=5) -> None:
+        super(SEWResidualBlock,self).__init__(norm,input_shape,in_channels,out_channels,conv_kernel_size,conv_stride,conv_padding,pool,
+                                              downsample,bias,v_threshold,v_reset,tau,surrogate_type,surrogate_param,surrogate_m)
+        if connect_function=='ADD':
+            self.connect_function=lambda x,identity:x+identity
+        elif connect_function=='AND':
+            self.connect_function=lambda x,identity:x*identity
+        elif connect_function=='IAND':
+            self.connect_function=lambda x,identity:identity*(1.0-x)
+        
+        if self.downsample and self.norm=='tdBN':
+            self.downsample_layer=nn.Sequential(
+                SeqToANNContainer(
+                    nn.Conv2d(in_channels,out_channels,1,conv_stride[0],0,bias=bias),
+                    nn.BatchNorm2d(out_channels)
+                ),
+                LIFNode(v_threshold=v_threshold,v_reset=v_reset,tau=tau,surrogate_type=surrogate_type,surrogate_param=surrogate_param,
+                        surrogate_m=surrogate_m)
+            )
+        elif self.downsample and self.norm!='tdBN':
+            self.downsample_layer=nn.Sequential(
+                SeqToANNContainer(
+                    nn.Conv2d(in_channels,out_channels,1,conv_stride[0],0,bias=bias)
+                ),
+                LIFNode(v_threshold=v_threshold,v_reset=v_reset,tau=tau,surrogate_type=surrogate_type,surrogate_param=surrogate_param,
+                        surrogate_m=surrogate_m)
+            )
+    
+    def forward(self,input:torch.Tensor) -> torch.Tensor:
+        identity=input
+        x=self.conv2d_layer_1(input)
+        x=self.lif_1(x)
+        x=self.conv2d_layer_2(x)
+        if self.downsample:
+            identity=self.downsample_layer(input)
+        x+=identity
+        output=self.lif_2(x)
+        if self.pool:
+            output=self.adaptive_avgpool_layer(output)
+        return output
 
 class MaxPool2dBlock(nn.Module):
     def __init__(self,kernel_size:int,stride:int,padding:int=0) -> None:

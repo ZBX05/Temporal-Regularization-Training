@@ -23,13 +23,21 @@ class SNN(nn.Module):
         for i,layer in zip(range(len(self.topology)),self.topology):
             layer=layer.split('-')
             try:
-                if layer[0]=='CONV' or layer[0]=='CONVNP' or layer[0]=='CONVAP':
+                if layer[0]=='CONV' or layer[0]=='CONVNP' or layer[0]=='CONVAP' or layer=='CONVEN':
                     in_channels=input_shape[0] if i==0 else out_channels
                     out_channels=int(layer[1])
                     # input_dim=input_shape if i==0 else int(
                     #     output_dim / 2)  # /2 accounts for pooling operation of the previous convolutional layer
                     # output_dim = int((input_dim - int(layer[2]) + 2 * int(layer[4])) / int(layer[3])) + 1
                     input_dim=input_shape if i==0 else (self.layers[i-1].output_height,self.layers[i-1].output_width)
+                    if len(layer)>5:
+                        pool_kernel_size=int(layer[5])
+                        pool_stride=int(layer[6])
+                        pool_padding=int(layer[7])
+                    else:
+                        pool_kernel_size=2
+                        pool_stride=2
+                        pool_padding=0
                     if layer[0]=='CONV':
                         self.layers.append(Conv2dBlock(
                             norm=norm,
@@ -39,9 +47,9 @@ class SNN(nn.Module):
                             conv_kernel_size=int(layer[2]),
                             conv_stride=int(layer[3]),
                             conv_padding=int(layer[4]),
-                            pool_kernel_size=2,
-                            pool_stride=2,
-                            pool_padding=0,
+                            pool_kernel_size=pool_kernel_size,
+                            pool_stride=pool_stride,
+                            pool_padding=pool_padding,
                             bias=True if norm=='No' else False,
                             v_threshold=v_threshold,
                             v_reset=v_reset,
@@ -76,9 +84,30 @@ class SNN(nn.Module):
                             conv_kernel_size=int(layer[2]),
                             conv_stride=int(layer[3]),
                             conv_padding=int(layer[4]),
-                            pool_kernel_size=2,
-                            pool_stride=2,
-                            pool_padding=0,
+                            pool_kernel_size=pool_kernel_size,
+                            pool_stride=pool_stride,
+                            pool_padding=pool_padding,
+                            bias=True if norm=='No' else False,
+                            v_threshold=v_threshold,
+                            v_reset=v_reset,
+                            tau=tau,
+                            surrogate_type=surrogate_type,
+                            surrogate_param=surrogate_param,
+                            surrogate_m=surrogate_m
+                        ))
+                    elif layer[0]=='CONVEN':
+                        self.layers.append(Conv2dEncoderBlock(
+                            T=T,
+                            norm=norm,
+                            input_shape=input_dim,
+                            in_channels=in_channels,
+                            out_channels=int(layer[1]),
+                            conv_kernel_size=int(layer[2]),
+                            conv_stride=int(layer[3]),
+                            conv_padding=int(layer[4]),
+                            pool_kernel_size=pool_kernel_size,
+                            pool_stride=pool_stride,
+                            pool_padding=pool_padding,
                             bias=True if norm=='No' else False,
                             v_threshold=v_threshold,
                             v_reset=v_reset,
@@ -88,7 +117,7 @@ class SNN(nn.Module):
                             surrogate_m=surrogate_m
                         ))
                     output_dim=self.layers[-1].output_height*self.layers[-1].output_width*self.layers[-1].out_channels
-                elif layer[0]=='RES':
+                elif layer[0]=='RES' or 'SEWRES' in layer[0]:
                     try:
                         pool=True if self.topology[i+1].split('-')[0]=='FC' else False
                     except IndexError:
@@ -211,7 +240,19 @@ class SNN(nn.Module):
     def forward(self,input:torch.Tensor,full_output:bool=False) -> torch.Tensor:
         x=input.unsqueeze(1).repeat(1,self.T,1,1,1) if self.expend_time else input
         x=self.layers(x)
+        # for i in range(len(self.layers)):
+        #     x=self.layers[i](x)
+        #     if not isinstance(self.layers,FlattenBlock):
+        #         print(x.shape)
+        # exit()
         #    layer_output=[]
         #    for i in range(len(self.layers)):
         #        layer_output.append(self.layers[i](x))
         return x.mean(1) if not full_output else x
+
+if __name__=='__main__':
+    model=SNN('CONV-64-7-2-3-3-2-1_RES-64-3=3-1=1-1=1_RES-64-3=3-1=1-1=1_RES-128-3=3-2=1-1=1_RES-128-3=3-1=1-1=1_RES-256-3=3-2=1-1=1_RES-256-3=3-1=1-1=1_RES-512-3=3-2=1-1=1_RES-512-3=3-1=1-1=1-_FC-256_L-1000',4,(3,224,224),0.0,'tdBN',0.5,0.0,5.0,'sigmoid',2.0,5,True,True)
+    # model=SNN('CONVNP-64-3-1-1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-256-3=3-2=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-512-3=3-2=1-1=1_RES-512-3=3-1=1-1=1-_FC-256_L-10',4,(3,32,32),0.0,'tdBN',0.5,0.0,5.0,'sigmoid',2.0,5,True,True)
+    # print(model)
+    # exit()
+    out=model(torch.randn(1,3,224,224))
