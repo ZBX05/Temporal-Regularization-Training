@@ -74,9 +74,9 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
     
     amp=False
     if args.amp:
-         amp=True
-        #  scaler=GradScaler(device='npu' if not args.cpu else 'cpu')
-         scaler=GradScaler(device='cuda' if not args.cpu else 'cpu')
+        amp=True
+        # scaler=GradScaler(device='npu' if not args.cpu else 'cpu')
+        scaler=GradScaler(device='cuda' if not args.cpu else 'cpu')
     
     reg_loss=args.regloss
     if reg_loss:
