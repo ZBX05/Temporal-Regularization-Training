@@ -19,7 +19,7 @@ def main():
     parser.add_argument('--gpu',type=str,default='0',help='GPU(s) ID. When using parallel training, the IDs must be specified as a string of comma-separated integers, like 0-1-2-3. Default: 0.')
     parser.add_argument('--seed',type=int,default=42)
     # Dataset
-    parser.add_argument('--dataset',type=str,choices=['MNIST','FMNIST','CIFAR10','CIFAR100','DVSCIFAR10','ImageNet'],default='MNIST',help='Choice of the dataset: MNIST (MNIST), Fashion-MNIST (FMNIST), CIFAR-10 (CIFAR10), CIFAR10-DVS (DVSCIFAR10). Default: MNIST.')
+    parser.add_argument('--dataset',type=str,choices=['MNIST','FMNIST','CIFAR10','CIFAR100','DVSCIFAR10','ImageNet100'],default='MNIST',help='Choice of the dataset: MNIST (MNIST), Fashion-MNIST (FMNIST), CIFAR-10 (CIFAR10), CIFAR10-DVS (DVSCIFAR10). Default: MNIST.')
     parser.add_argument('--augment',type=int,default=1,help='Whether to use data augmentation for CIFAR-10 and CIFAR10-DVS. Default: True.')
     #Training
     parser.add_argument('--optimizer',choices=['SGD','AdamW','Adam','RMSprop'],default='Adam',help='Choice of the optimizer - stochastic gradient descent with 0.9 momentum (SGD), SGD with 0.9 momentum and AdamW (AdamW), Adam (Adam), and RMSprop (RMSprop). Default: AdamW.')
@@ -94,8 +94,8 @@ def main():
         if args.topology=='VGGSNN':
             args.model='VGGSNN'
             args.topology=f'CONVNP-64-3-1-1_CONVAP-128-3-1-1_CONVNP-256-3-1-1_CONVAP-256-3-1-1_CONVNP-512-3-1-1_CONVAP-512-3-1-1_CONVNP-512-3-1-1_CONVAP-512-3-1-1_L-{args.label_size}'
-    elif args.dataset=='ImageNet':
-        train_data_loader,test_data_loader,input_shape=load_dataset_imagenet(experiment_path+'/data',args.batch_size,True)
+    elif args.dataset=='ImageNet100':
+        train_data_loader,test_data_loader,input_shape=load_dataset_imagenet100(experiment_path+'/data',args.batch_size,True)
         args.label_size=1000
         args.expend_time=True
         if args.topology=='ResNet-19':
