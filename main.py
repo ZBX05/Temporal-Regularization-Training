@@ -30,7 +30,6 @@ def main():
     parser.add_argument('--loss_decay',type=float,default=0.5,help='Means afctor for Temporal Efficient Training loss function, make all the potential increment around the means. Default: 0.5.')
     parser.add_argument('--loss_lambda',type=float,default=1e-5,help='Lambda factor for Temporal Efficient Training loss function. Default: 0.00001.')
     parser.add_argument('--loss_epsilon',type=float,default=1e-5)
-    parser.add_argument('--loss_means',type=float,default=1.0)
     parser.add_argument('--loss_eta',type=float,default=0.05)
     parser.add_argument('--dropout',type=float,default=0.0,help='Dropout probability (applied only to fully-connected layers). Default: 0.')
     parser.add_argument('--epochs',type=int,default=300,help='Number of training epochs Default: 300.')
@@ -114,7 +113,7 @@ def main():
         assert args.surrogate_m>0,'m must be an integer greater than 0.'
     else:
         assert 0<=args.surrogate_m<=1.0,'m indicates the probability of the spike mask, must be in [0,1].' 
-    assert args.tau>1,'tau must be greater than 1.0.'
+    assert args.tau>=1,'tau must be greater than or equal to 1.0.'
     assert not(args.regloss and args.criterion=='MSE'),'MSE is not supported in TET.'
 
     args.weight_decay=None
