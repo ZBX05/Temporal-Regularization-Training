@@ -5,9 +5,9 @@ sys.path.append(root_path)
 
 from torchvision import datasets,transforms
 
-def get_dataset(root_path:str) -> tuple[datasets.CIFAR100,datasets.CIFAR100]:
+def get_dataset(root_path:str) -> tuple[datasets.ImageFolder,datasets.ImageFolder]:
     train_transform=transforms.Compose([
-        transforms.RandomCrop(224),
+        transforms.RandomResizedCrop(224),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize((0.485, 0.456, 0.406),(0.229,0.224,0.225))
@@ -18,8 +18,8 @@ def get_dataset(root_path:str) -> tuple[datasets.CIFAR100,datasets.CIFAR100]:
         transforms.ToTensor(),
         transforms.Normalize((0.5071,0.4867,0.4408),(0.2675,0.2565,0.2761))
     ])
-    train_data=datasets.ImageNet(root=root_path,split='train',transform=train_transform)
-    test_data=datasets.ImageNet(root=root_path,split='val',transform=test_transform)
+    train_data=datasets.ImageFolder(root=root_path+'/train',transform=train_transform)
+    test_data=datasets.ImageFolder(root=root_path+'/val',transform=test_transform)
     return train_data,test_data
 
 # if __name__=='__main__':
