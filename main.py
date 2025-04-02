@@ -96,7 +96,7 @@ def main():
             args.topology=f'CONVNP-64-3-1-1_CONVAP-128-3-1-1_CONVNP-256-3-1-1_CONVAP-256-3-1-1_CONVNP-512-3-1-1_CONVAP-512-3-1-1_CONVNP-512-3-1-1_CONVAP-512-3-1-1_L-{args.label_size}'
     elif args.dataset=='ImageNet100':
         train_data_loader,test_data_loader,input_shape=load_dataset_imagenet100(experiment_path+'/data',args.batch_size,True)
-        args.label_size=1000
+        args.label_size=100
         args.expend_time=True
         if args.topology=='ResNet-19':
             args.model='ResNet-19'
