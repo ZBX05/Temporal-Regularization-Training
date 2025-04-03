@@ -2,7 +2,6 @@ __pycache__
 *.pth
 data
 test.py
-REG_Loss.code-workspace
 script.md
 script.ipynb
 .ipynb_checkpoints
@@ -10,3 +9,4 @@ result
 __model.py
 __neuron.py
 .gitignore
+*.code-workspace
