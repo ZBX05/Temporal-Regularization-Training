@@ -87,6 +87,11 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
     if args.weight_decay is not None:
         weight_decay=True
         decay_dict=args.weight_decay
+    
+    if args.mean_reduce:
+        get_backward_loss=lambda loss:loss.mean()
+    else:
+        get_backward_loss=lambda loss:loss
 
     best_test_acc=0
     best_test_loss=0
@@ -121,7 +126,8 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
                             for name,param in model.named_parameters():
                                 if 'weight' in name:
                                     loss+=decay_dict["decay"]*norm(param)
-                    scaler.scale(loss.mean()).backward()
+                    loss=get_backward_loss(loss)
+                    scaler.scale(loss).backward()
                     scaler.step(optimizer)
                     scaler.update()
             else:
@@ -140,7 +146,8 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
                         for name,param in model.named_parameters():
                             if 'weight' in name:
                                 loss+=decay_dict["decay"]*norm(param)
-                loss.mean().backward()
+                loss=get_backward_loss(loss)
+                loss.backward()
                 optimizer.step()
             train_samples+=labels.size(0)
             train_loss+=loss.item()*labels.size(0)

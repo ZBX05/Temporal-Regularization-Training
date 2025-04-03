@@ -31,6 +31,7 @@ def main():
     parser.add_argument('--loss_lambda',type=float,default=1e-5,help='Lambda factor for Temporal Regularization Training loss function. Default: 0.00001.')
     parser.add_argument('--loss_epsilon',type=float,default=1e-5)
     parser.add_argument('--loss_eta',type=float,default=0.05)
+    parser.add_argument('--mean_reduce',type=int,default=1,help='Whether to reduce the mean of the loss function. Default: True.')
     parser.add_argument('--dropout',type=float,default=0.0,help='Dropout probability (applied only to fully-connected layers). Default: 0.')
     parser.add_argument('--epochs',type=int,default=300,help='Number of training epochs Default: 300.')
     parser.add_argument('--batch_size',type=int,default=64,help='Input batch size for training. Default: 256.')
@@ -97,6 +98,7 @@ def main():
         train_data_loader,test_data_loader,input_shape=load_dataset_imagenet100(experiment_path+'/data',args.batch_size,True)
         args.label_size=100
         args.expend_time=True
+        args.mean_reduce=0
         if args.topology=='ResNet-19':
             args.model='ResNet-19'
             args.topology=f'CONV-64-7-2-3-3-2-1_RES-64-3=3-1=1-1=1_RES-64-3=3-1=1-1=1_RES-128-3=3-2=1-1=1_RES-128-3=3-1=1-1=1_RES-256-3=3-2=1-1=1_RES-256-3=3-1=1-1=1_RES-512-3=3-2=1-1=1_RES-512-3=3-1=1-1=1-_FC-256_L-{args.label_size}'
