@@ -11,7 +11,7 @@ from tensorboardX import SummaryWriter
 import time
 import logging
 from argparse import Namespace
-from function import REG_Loss
+from function import TRT_Loss
 
 def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test_data_loader:DataLoader,device:torch.device,
           experiment_path:str) -> None:
@@ -108,7 +108,7 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
                 with torch.amp.autocast(device_type='cuda' if not args.cpu else 'cpu'):
                     if reg_loss:
                         output=model(img,True)
-                        loss=REG_Loss(model,output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
+                        loss=TRT_Loss(model,output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
                         output=output.mean(1)
                     else:
                         output=model(img)
@@ -127,7 +127,7 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
             else:
                 if reg_loss:
                     output=model(img,True)
-                    loss=REG_Loss(output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
+                    loss=TRT_Loss(output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
                     output=output.mean(1)
                 else:
                     output=model(img)

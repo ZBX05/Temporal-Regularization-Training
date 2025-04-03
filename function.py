@@ -53,7 +53,7 @@ class ActFun(torch.autograd.Function):
             raise NameError('Surrogate type '+str(surrogate_type)+' is not supported!')
         return grad_surrogate.float()*grad_input,None,param_grad,None
 
-def REG_Loss(model:torch.nn.Module,outputs:torch.Tensor,labels:torch.Tensor,criterion:Any,decay:float,lamb:float,epsilon:float,
+def TRT_Loss(model:torch.nn.Module,outputs:torch.Tensor,labels:torch.Tensor,criterion:Any,decay:float,lamb:float,epsilon:float,
              eta:float=0.05) -> torch.Tensor:
     T=outputs.size(1)
     loss=0

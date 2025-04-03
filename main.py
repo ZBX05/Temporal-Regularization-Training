@@ -26,9 +26,9 @@ def main():
     parser.add_argument('--l1',type=float,default=0,help='L1 regularization coefficient. Default: 0.')
     parser.add_argument('--l2',type=float,default=0,help='L2 regularization coefficient. Default: 0.')
     parser.add_argument('--criterion',choices=['MSE','BCE','CE'], default='CE',help='Choice of criterion (loss function) - mean squared error (MSE), binary cross entropy (BCE), cross entropy (CE, which already contains a logsoftmax activation function). Default: MSE.')
-    parser.add_argument('--regloss',type=int,default=1,help='Whether to use the Temporal Efficient Training method. Default: False.')
-    parser.add_argument('--loss_decay',type=float,default=0.5,help='Means afctor for Temporal Efficient Training loss function, make all the potential increment around the means. Default: 0.5.')
-    parser.add_argument('--loss_lambda',type=float,default=1e-5,help='Lambda factor for Temporal Efficient Training loss function. Default: 0.00001.')
+    parser.add_argument('--regloss',type=int,default=1,help='Whether to use the Temporal Regularization Training method. Default: False.')
+    parser.add_argument('--loss_decay',type=float,default=0.5,help='Means afctor for Temporal Regularization Training loss function, make all the potential increment around the means. Default: 0.5.')
+    parser.add_argument('--loss_lambda',type=float,default=1e-5,help='Lambda factor for Temporal Regularization Training loss function. Default: 0.00001.')
     parser.add_argument('--loss_epsilon',type=float,default=1e-5)
     parser.add_argument('--loss_eta',type=float,default=0.05)
     parser.add_argument('--dropout',type=float,default=0.0,help='Dropout probability (applied only to fully-connected layers). Default: 0.')
@@ -101,9 +101,8 @@ def main():
             args.model='ResNet-19'
             args.topology=f'CONV-64-7-2-3-3-2-1_RES-64-3=3-1=1-1=1_RES-64-3=3-1=1-1=1_RES-128-3=3-2=1-1=1_RES-128-3=3-1=1-1=1_RES-256-3=3-2=1-1=1_RES-256-3=3-1=1-1=1_RES-512-3=3-2=1-1=1_RES-512-3=3-1=1-1=1-_FC-256_L-{args.label_size}'
         elif args.topology=='SEW-ResNet-34':
-            args.expend_time=False
             args.model='SEW-ResNet-34'
-            args.topology=f'L-{args.label_size}' # TODO: Complete the topology of SEW-ResNet-34.
+            args.topology=f'CONV-64-7-2-3-3-2-1_RES-64-3=3-1=1-1=1_RES-64-3=3-1=1-1=1_RES-64-3=3-1=1-1=1_RES-128-3=3-2=1-1=1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-256-3=3-2=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-512-3=3-2=1-1=1_RES-512-3=3-1=1-1=1_RES-512-3=3-1=1-1=1-_FC-256_L-{args.label_size}'
     else:
         raise ValueError('Unsupported dataset: '+args.dataset+'.')
 
