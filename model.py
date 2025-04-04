@@ -133,24 +133,46 @@ class SNN(nn.Module):
                     conv_stride=to_num(layer[3].split('='))
                     conv_padding=to_num(layer[4].split('='))
                     downsample=True if conv_stride[0]!=conv_stride[1] or in_channels!=out_channels else False
-                    self.layers.append(ResidualBlock(
-                        norm=norm,
-                        input_shape=input_dim,
-                        in_channels=in_channels,
-                        out_channels=out_channels,
-                        conv_kernel_size=conv_kernel_size,
-                        conv_stride=conv_stride,
-                        conv_padding=conv_padding,
-                        pool=pool,
-                        downsample=downsample,
-                        bias=True if norm=='No' else False,
-                        v_threshold=v_threshold,
-                        v_reset=v_reset,
-                        tau=tau,
-                        surrogate_type=surrogate_type,
-                        surrogate_param=surrogate_param,
-                        surrogate_m=surrogate_m
-                    ))
+                    if layer[0]=='RES':
+                        self.layers.append(ResidualBlock(
+                            norm=norm,
+                            input_shape=input_dim,
+                            in_channels=in_channels,
+                            out_channels=out_channels,
+                            conv_kernel_size=conv_kernel_size,
+                            conv_stride=conv_stride,
+                            conv_padding=conv_padding,
+                            pool=pool,
+                            downsample=downsample,
+                            bias=True if norm=='No' else False,
+                            v_threshold=v_threshold,
+                            v_reset=v_reset,
+                            tau=tau,
+                            surrogate_type=surrogate_type,
+                            surrogate_param=surrogate_param,
+                            surrogate_m=surrogate_m
+                        ))
+                    elif 'SEWRES' in layer[0]:
+                        connect_function=layer[0].split('~')[1]
+                        self.layers.append(ResidualBlock(
+                            connect_function=connect_function,
+                            norm=norm,
+                            input_shape=input_dim,
+                            in_channels=in_channels,
+                            out_channels=out_channels,
+                            conv_kernel_size=conv_kernel_size,
+                            conv_stride=conv_stride,
+                            conv_padding=conv_padding,
+                            pool=pool,
+                            downsample=downsample,
+                            bias=True if norm=='No' else False,
+                            v_threshold=v_threshold,
+                            v_reset=v_reset,
+                            tau=tau,
+                            surrogate_type=surrogate_type,
+                            surrogate_param=surrogate_param,
+                            surrogate_m=surrogate_m
+                        ))
                 elif layer[0]=='FC' or layer[0]=='L':
                     if i==0:
                         input_dim=1
