@@ -23,7 +23,7 @@ class SNN(nn.Module):
         for i,layer in zip(range(len(self.topology)),self.topology):
             layer=layer.split('-')
             try:
-                if layer[0]=='CONV' or layer[0]=='CONVNP' or layer[0]=='CONVAP' or layer=='CONVEN':
+                if layer[0]=='CONV' or layer[0]=='CONVNP' or layer[0]=='CONVAP' or layer[0]=='CONVEN':
                     in_channels=input_shape[0] if i==0 else out_channels
                     out_channels=int(layer[1])
                     # input_dim=input_shape if i==0 else int(

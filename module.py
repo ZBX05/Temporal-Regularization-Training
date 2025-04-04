@@ -193,7 +193,7 @@ class Conv2dEncoderBlock(Conv2dBlock):
 
     def forward(self,input:torch.Tensor) -> torch.Tensor:
         x=self.conv2d_layer(input)
-        x=self.time_expension_layer(input)
+        x=self.time_expension_layer(x)
         x=self.lif(x)
         output=self.maxpool2d_layer(x)
         return output
