@@ -119,7 +119,7 @@ class SNN(nn.Module):
                     output_dim=self.layers[-1].output_height*self.layers[-1].output_width*self.layers[-1].out_channels
                 elif layer[0]=='RES' or 'SEWRES' in layer[0]:
                     try:
-                        pool=True if self.topology[i+1].split('-')[0]=='FC' else False
+                        pool=True if self.topology[i+1].split('-')[0]=='FC' or self.topology[i+1].split('-')[0]=='L' else False
                     except IndexError:
                         raise ValueError('Residual block cannot be the last layer of ResNet!')
                     in_channels=out_channels
@@ -154,7 +154,7 @@ class SNN(nn.Module):
                         ))
                     elif 'SEWRES' in layer[0]:
                         connect_function=layer[0].split('~')[1]
-                        self.layers.append(ResidualBlock(
+                        self.layers.append(SEWResidualBlock(
                             connect_function=connect_function,
                             norm=norm,
                             input_shape=input_dim,
@@ -179,7 +179,7 @@ class SNN(nn.Module):
                         for i in range(len(input_shape)):
                             input_dim*=input_shape[i] 
                         self.layers.append(self.flatten)
-                    elif 'CONV' in self.topology[i-1].split('-')[0] or 'RES'==self.topology[i-1].split('-')[0]:
+                    elif 'CONV' in self.topology[i-1].split('-')[0] or 'RES' in self.topology[i-1].split('-')[0]:
                         input_dim=self.layers[i-1].output_height*self.layers[i-1].output_width*self.layers[i-1].out_channels
                         self.layers.append(self.flatten)
                     # TODO: Conv1dBlock
@@ -274,7 +274,7 @@ class SNN(nn.Module):
 
 if __name__=='__main__':
     # model=SNN('CONV-64-7-2-3-3-2-1_RES-64-3=3-1=1-1=1_RES-64-3=3-1=1-1=1_RES-128-3=3-2=1-1=1_RES-128-3=3-1=1-1=1_RES-256-3=3-2=1-1=1_RES-256-3=3-1=1-1=1_RES-512-3=3-2=1-1=1_RES-512-3=3-1=1-1=1-_FC-256_L-1000',4,(3,224,224),0.0,'tdBN',0.5,0.0,5.0,'sigmoid',2.0,5,True,True)
-    model=SNN('CONV-64-7-2-3-3-2-1_RES-64-3=3-1=1-1=1_RES-64-3=3-1=1-1=1_RES-64-3=3-1=1-1=1_RES-128-3=3-2=1-1=1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-256-3=3-2=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-512-3=3-2=1-1=1_RES-512-3=3-1=1-1=1_RES-512-3=3-1=1-1=1-_FC-256_L-100',4,(3,224,224),0.0,'tdBN',0.5,0.0,5.0,'sigmoid',2.0,5,True,True)
+    model=SNN('CONV-64-7-2-3-3-2-1_SEWRES~ADD-64-3=3-1=1-1=1_SEWRES~ADD-64-3=3-1=1-1=1_SEWRES~ADD-64-3=3-1=1-1=1_SEWRES~ADD-128-3=3-2=1-1=1_SEWRES~ADD-128-3=3-1=1-1=1_SEWRES~ADD-128-3=3-1=1-1=1_SEWRES~ADD-128-3=3-1=1-1=1_SEWRES~ADD-256-3=3-2=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-512-3=3-2=1-1=1_SEWRES~ADD-512-3=3-1=1-1=1_SEWRES~ADD-512-3=3-1=1-1=1-_L-100',4,(3,224,224),0.0,'tdBN',0.5,0.0,5.0,'sigmoid',2.0,5,True,True)
     # model=SNN('CONVNP-64-3-1-1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-256-3=3-2=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-512-3=3-2=1-1=1_RES-512-3=3-1=1-1=1-_FC-256_L-10',4,(3,32,32),0.0,'tdBN',0.5,0.0,5.0,'sigmoid',2.0,5,True,True)
     # print(model)
     # exit()

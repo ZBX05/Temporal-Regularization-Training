@@ -99,10 +99,10 @@ def main():
         args.label_size=100
         args.expend_time=True
         args.mean_reduce=0
-        if args.topology=='ResNet-19':
-            args.model='ResNet-19'
-            args.topology=f'CONV-64-7-2-3-3-2-1_RES-64-3=3-1=1-1=1_RES-64-3=3-1=1-1=1_RES-128-3=3-2=1-1=1_RES-128-3=3-1=1-1=1_RES-256-3=3-2=1-1=1_RES-256-3=3-1=1-1=1_RES-512-3=3-2=1-1=1_RES-512-3=3-1=1-1=1-_FC-256_L-{args.label_size}'
-        elif args.topology=='SEW-ResNet-34':
+        # if args.topology=='ResNet-19':
+        #     args.model='ResNet-19'
+        #     args.topology=f'CONV-64-7-2-3-3-2-1_RES-64-3=3-1=1-1=1_RES-64-3=3-1=1-1=1_RES-128-3=3-2=1-1=1_RES-128-3=3-1=1-1=1_RES-256-3=3-2=1-1=1_RES-256-3=3-1=1-1=1_RES-512-3=3-2=1-1=1_RES-512-3=3-1=1-1=1-_FC-256_L-{args.label_size}'
+        if args.topology=='SEW-ResNet-34':
             args.expend_time=False
             args.model='SEW-ResNet-34'
             args.topology=f'CONVEN-64-7-2-3-3-2-1_SEWRES~ADD-64-3=3-1=1-1=1_SEWRES~ADD-64-3=3-1=1-1=1_SEWRES~ADD-64-3=3-1=1-1=1_SEWRES~ADD-128-3=3-2=1-1=1_SEWRES~ADD-128-3=3-1=1-1=1_SEWRES~ADD-128-3=3-1=1-1=1_SEWRES~ADD-128-3=3-1=1-1=1_SEWRES~ADD-256-3=3-2=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-512-3=3-2=1-1=1_SEWRES~ADD-512-3=3-1=1-1=1_SEWRES~ADD-512-3=3-1=1-1=1-_L-{args.label_size}'
