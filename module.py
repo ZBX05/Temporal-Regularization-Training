@@ -322,10 +322,10 @@ class SEWResidualBlock(ResidualBlock):
         x=self.conv2d_layer_1(input)
         x=self.lif_1(x)
         x=self.conv2d_layer_2(x)
+        x=self.lif_2(x)
         if self.downsample:
             identity=self.downsample_layer(input)
-        x+=identity
-        output=self.lif_2(x)
+        output=self.connect_function(x,identity)
         if self.pool:
             output=self.adaptive_avgpool_layer(output)
         return output
