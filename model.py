@@ -206,7 +206,6 @@ class SNN(nn.Module):
                         ))
                     elif layer[0]=='L':
                         self.layers.append(SeqToANNContainer(nn.Linear(input_dim,output_dim,True)))
-
                 # TODO: Conv1dBlock
                 # elif layer[0]=='C':
                 #     in_channels = input_channels if (i == 0) else out_channels
@@ -231,29 +230,6 @@ class SNN(nn.Module):
                     raise NameError('Layer construct '+str(layer[0])+' not supported!')
             except ValueError as e:
                 raise ValueError('Unsupported layer parameter format: '+str(e)+'.')
-        # if self.surrogate_type=='dzo' and self.surrogate_layers!=0:
-        #     if len(self.topology)<abs(self.surrogate_layers):
-        #         raise ValueError(f'The number of layers in the topology ({len(self.topology)}) is less than the absolute value of surrogate_layers ({self.surrogate_layers})!')
-        #     if self.surrogate_layers>0:
-        #         i=0
-        #         for layer in self.layers:
-        #             if hasattr(layer,'lif'):
-        #                 if i<self.surrogate_layers:
-        #                     i+=1
-        #                 else:
-        #                     layer.lif.surrogate_type='zo'
-        #                     layer.lif.surrogate_param=self.surrogate_param["param"]
-        #     elif self.surrogate_layers<0:
-        #         i=len(self.layers)-1
-        #         num=0
-        #         while i>=0:
-        #             if hasattr(self.layers[i],'lif'):
-        #                 if num<abs(self.surrogate_layers):
-        #                     num+=1
-        #                 else:
-        #                     self.layers[i].lif.surrogate_type='zo'
-        #                     self.layers[i].lif.surrogate_param=self.surrogate_param["param"]
-        #             i-=1
         if init:
             for m in self.modules():
                 if isinstance(m,nn.Conv2d):
