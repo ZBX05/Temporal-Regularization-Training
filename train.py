@@ -11,7 +11,7 @@ from tensorboardX import SummaryWriter
 import time
 import logging
 from argparse import Namespace
-from function import TRT_Loss
+from function import TRT_Loss,TET_loss
 
 def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test_data_loader:DataLoader,device:torch.device,
           experiment_path:str) -> None:
@@ -83,6 +83,16 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
         loss_eta=args.loss_eta
         # loss_means=args.loss_means
     
+    tet_loss=args.tetloss
+    if tet_loss:
+        tet_lambda=args.loss_lambda
+        tet_means=args.loss_means
+    
+    # observe_tic=False
+    # if args.observe_tic:
+    #     observe_tic=True
+    #     tic_epochs=args.tic_epochs.split('-')
+    
     weight_decay=False
     if args.weight_decay is not None:
         weight_decay=True
@@ -111,9 +121,12 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
             optimizer.zero_grad()
             if amp:
                 with torch.amp.autocast(device_type='cuda' if not args.cpu else 'cpu'):
-                    if reg_loss:
+                    if reg_loss or tet_loss:
                         output=model(img,True)
-                        loss=TRT_Loss(model,output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
+                        if reg_loss:
+                            loss=TRT_Loss(model,output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
+                        elif tet_loss:
+                            loss=TET_loss(output,labels,criterion,tet_means,tet_lambda)
                         output=output.mean(1)
                     else:
                         output=model(img)
@@ -131,9 +144,12 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
                     scaler.step(optimizer)
                     scaler.update()
             else:
-                if reg_loss:
+                if reg_loss or tet_loss:
                     output=model(img,True)
-                    loss=TRT_Loss(output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
+                    if reg_loss:
+                        loss=TRT_Loss(output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
+                    elif tet_loss:
+                        loss=TET_loss(output,labels,criterion,tet_means,tet_lambda)
                     output=output.mean(1)
                 else:
                     output=model(img)

@@ -76,3 +76,17 @@ def TRT_Loss(model:torch.nn.Module,outputs:torch.Tensor,labels:torch.Tensor,crit
         # loss=(1-eta)*loss+eta*sup_loss
     loss=loss/T
     return loss
+
+def TET_loss(outputs:torch.Tensor,labels:torch.Tensor,criterion:Any,means:float,lamb:float) -> torch.Tensor:
+    T=outputs.size(1)
+    Loss_es=0
+    for t in range(T):
+        Loss_es+=criterion(outputs[:,t,...],labels)
+    Loss_es=Loss_es/T # L_TET
+    if lamb!=0:
+        MMDLoss=torch.nn.MSELoss()
+        y=torch.zeros_like(outputs).fill_(means)
+        Loss_mmd=MMDLoss(outputs, y) # L_mse
+    else:
+        Loss_mmd=0
+    return (1-lamb)*Loss_es+lamb*Loss_mmd # L_Total
