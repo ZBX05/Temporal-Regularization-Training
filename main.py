@@ -28,7 +28,7 @@ def main():
     parser.add_argument('--l1',type=float,default=0,help='L1 regularization coefficient. Default: 0.')
     parser.add_argument('--l2',type=float,default=0,help='L2 regularization coefficient. Default: 0.')
     parser.add_argument('--criterion',choices=['MSE','BCE','CE'], default='CE',help='Choice of criterion (loss function) - mean squared error (MSE), binary cross entropy (BCE), cross entropy (CE, which already contains a logsoftmax activation function). Default: MSE.')
-    parser.add_argument('--tetloss',type=int,default=1)
+    parser.add_argument('--tetloss',type=int,default=0)
     parser.add_argument('--loss_means',type=float,default=1.0)
     parser.add_argument('--regloss',type=int,default=1,help='Whether to use the Temporal Regularization Training method. Default: False.')
     parser.add_argument('--loss_decay',type=float,default=0.5,help='Means afctor for Temporal Regularization Training loss function, make all the potential increment around the means. Default: 0.5.')
