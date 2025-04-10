@@ -22,7 +22,7 @@ def main():
     parser.add_argument('--dataset',type=str,choices=['MNIST','FMNIST','CIFAR10','CIFAR100','DVSCIFAR10','ImageNet100'],default='MNIST',help='Choice of the dataset: MNIST (MNIST), Fashion-MNIST (FMNIST), CIFAR-10 (CIFAR10), CIFAR10-DVS (DVSCIFAR10). Default: MNIST.')
     parser.add_argument('--augment',type=int,default=1,help='Whether to use data augmentation for CIFAR-10 and CIFAR10-DVS. Default: True.')
     #Training
-    parser.add_argument('observe_fi',type=int,default=1,help='Whether to observe the Fisher Information. Default: False.')
+    parser.add_argument('--observe_fi',type=int,default=0,help='Whether to observe the Fisher Information. Default: False.')
     parser.add_argument('--fi_epochs',type=str,default='20-40-60-80-100-120-200-300',help='Checkpoints for FI observation. Default: 20-40-60-80-100-120-200-300.')
     parser.add_argument('--optimizer',choices=['SGD','AdamW','Adam','RMSprop'],default='Adam',help='Choice of the optimizer - stochastic gradient descent with 0.9 momentum (SGD), SGD with 0.9 momentum and AdamW (AdamW), Adam (Adam), and RMSprop (RMSprop). Default: AdamW.')
     parser.add_argument('--l1',type=float,default=0,help='L1 regularization coefficient. Default: 0.')
