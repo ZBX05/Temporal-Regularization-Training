@@ -22,8 +22,8 @@ def main():
     parser.add_argument('--dataset',type=str,choices=['MNIST','FMNIST','CIFAR10','CIFAR100','DVSCIFAR10','ImageNet100'],default='MNIST',help='Choice of the dataset: MNIST (MNIST), Fashion-MNIST (FMNIST), CIFAR-10 (CIFAR10), CIFAR10-DVS (DVSCIFAR10). Default: MNIST.')
     parser.add_argument('--augment',type=int,default=1,help='Whether to use data augmentation for CIFAR-10 and CIFAR10-DVS. Default: True.')
     #Training
-    # parser.add_argument('observe_tic',type=int,default=1,help='Whether to observe the TIC phenomenon. Default: False.')
-    # parser.add_argument('--tic_epochs',type=str,default='20-40-60-80-100-120-200-300',help='Checkpoints for IC. Default: 20-40-60-80-100-120-200-300.')
+    parser.add_argument('observe_fi',type=int,default=1,help='Whether to observe the Fisher Information. Default: False.')
+    parser.add_argument('--fi_epochs',type=str,default='20-40-60-80-100-120-200-300',help='Checkpoints for FI observation. Default: 20-40-60-80-100-120-200-300.')
     parser.add_argument('--optimizer',choices=['SGD','AdamW','Adam','RMSprop'],default='Adam',help='Choice of the optimizer - stochastic gradient descent with 0.9 momentum (SGD), SGD with 0.9 momentum and AdamW (AdamW), Adam (Adam), and RMSprop (RMSprop). Default: AdamW.')
     parser.add_argument('--l1',type=float,default=0,help='L1 regularization coefficient. Default: 0.')
     parser.add_argument('--l2',type=float,default=0,help='L2 regularization coefficient. Default: 0.')
@@ -106,9 +106,9 @@ def main():
             args.model='ResNet-34'
             args.topology=f'CONV-64-7-2-3-3-2-1_RES-64-3=3-1=1-1=1_RES-64-3=3-1=1-1=1_RES-64-3=3-1=1-1=1_RES-128-3=3-2=1-1=1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-256-3=3-2=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-512-3=3-2=1-1=1_RES-512-3=3-1=1-1=1_RES-512-3=3-1=1-1=1-_L-{args.label_size}'
         if args.topology=='SEW-ResNet-34':
-            args.expend_time=False
+            # args.expend_time=False
             args.model='SEW-ResNet-34'
-            args.topology=f'CONVEN-64-7-2-3-3-2-1_SEWRES~ADD-64-3=3-1=1-1=1_SEWRES~ADD-64-3=3-1=1-1=1_SEWRES~ADD-64-3=3-1=1-1=1_SEWRES~ADD-128-3=3-2=1-1=1_SEWRES~ADD-128-3=3-1=1-1=1_SEWRES~ADD-128-3=3-1=1-1=1_SEWRES~ADD-128-3=3-1=1-1=1_SEWRES~ADD-256-3=3-2=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-512-3=3-2=1-1=1_SEWRES~ADD-512-3=3-1=1-1=1_SEWRES~ADD-512-3=3-1=1-1=1-_L-{args.label_size}'
+            args.topology=f'CONV-64-7-2-3-3-2-1_SEWRES~ADD-64-3=3-1=1-1=1_SEWRES~ADD-64-3=3-1=1-1=1_SEWRES~ADD-64-3=3-1=1-1=1_SEWRES~ADD-128-3=3-2=1-1=1_SEWRES~ADD-128-3=3-1=1-1=1_SEWRES~ADD-128-3=3-1=1-1=1_SEWRES~ADD-128-3=3-1=1-1=1_SEWRES~ADD-256-3=3-2=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-512-3=3-2=1-1=1_SEWRES~ADD-512-3=3-1=1-1=1_SEWRES~ADD-512-3=3-1=1-1=1-_L-{args.label_size}'
     else:
         raise ValueError('Unsupported dataset: '+args.dataset+'.')
 
