@@ -3,6 +3,10 @@ import torch.nn.functional as F
 import warnings
 from typing import Any
 from math import exp
+from copy import deepcopy
+from tqdm import tqdm
+from tensorboardX import SummaryWriter
+import logging
 
 warnings.filterwarnings('ignore',category=Warning)
 
@@ -77,7 +81,7 @@ def TRT_Loss(model:torch.nn.Module,outputs:torch.Tensor,labels:torch.Tensor,crit
     loss=loss/T
     return loss
 
-def TET_loss(outputs:torch.Tensor,labels:torch.Tensor,criterion:Any,means:float,lamb:float) -> torch.Tensor:
+def TET_Loss(outputs:torch.Tensor,labels:torch.Tensor,criterion:Any,means:float,lamb:float) -> torch.Tensor:
     T=outputs.size(1)
     Loss_es=0
     for t in range(T):
@@ -90,3 +94,49 @@ def TET_loss(outputs:torch.Tensor,labels:torch.Tensor,criterion:Any,means:float,
     else:
         Loss_mmd=0
     return (1-lamb)*Loss_es+lamb*Loss_mmd # L_Total
+
+def FI_observation(model:torch.nn.Module,train_data_loader:torch.utils.data.DataLoader,epoch:int,T:int,device:torch.device,logging:logging,
+                   writer:SummaryWriter) -> None:
+    print('Start to calculate the Fisher Information in epoch {:3d}'.format(epoch))
+    logging.info('Start to calculate the Fisher Information in epoch {:3d}'.format(epoch))
+    fisherlist=[[] for _ in range(T)]
+    ep_fisher_list=[]
+    N=len(train_data_loader)
+    for t in range(1,T+1):
+        params={n:p for n,p in model.named_parameters() if p.requires_grad}
+        precision_matrices={}
+        for n,p in deepcopy(params).items():
+            p.data.zero_()
+            precision_matrices[n] = p.data
+        model.eval()
+
+        for step,(img,labels) in enumerate(tqdm(train_data_loader)):
+            model.zero_grad()
+            img=img.to(device)
+            labels=labels.to(device)
+            output=model(img,True)
+            loss=F.nll_loss(F.log_softmax(torch.sum(output[:,:t,...],dim=1)/t,dim=0),labels)
+            loss.backward()
+
+            for n,p in model.named_parameters():
+                if p.grad is not None:
+                    precision_matrices[n].data+=p.grad.data**2/N
+
+            # if step==len(train_data_loader)-1:
+            #     break
+
+        precision_matrices={n:p for n,p in precision_matrices.items()}
+        fisher_trace_info=0
+        for p in precision_matrices:
+            weight=precision_matrices[p]
+            fisher_trace_info+=weight.sum()
+        # fisher_trace_info/=len(train_data_loader.dataset)
+
+        print('Time: {:2d} | FisherInfo: {:4f}'.format(t,fisher_trace_info))
+        logging.info('Time: {:2d} | FisherInfo: {:4f}'.format(t,fisher_trace_info))
+        fisherlist[t-1].append(float(fisher_trace_info.cpu().data.numpy()))
+        ep_fisher_list.append(float(fisher_trace_info.cpu().data.numpy()))
+        writer.add_scalar(f'fisher_trace_info_curve_{epoch}',ep_fisher_list[-1],t)
+
+        print('Fisher list: ',ep_fisher_list)
+        logging.info('Fisher list: '+str(ep_fisher_list))

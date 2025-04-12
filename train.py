@@ -11,7 +11,7 @@ from tensorboardX import SummaryWriter
 import time
 import logging
 from argparse import Namespace
-from function import TRT_Loss,TET_loss
+from function import TRT_Loss,TET_Loss,FI_observation
 
 def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test_data_loader:DataLoader,device:torch.device,
           experiment_path:str) -> None:
@@ -23,6 +23,8 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
         first_str=f'REG({args.criterion})_'+first_str
     else:
         first_str=args.criterion+'_'+first_str
+    if args.observe_fi:
+        first_str='FI_'+first_str
     time_str=time.strftime(r'%Y-%m-%d_%H-%M-%S')
     result_root_path=experiment_path+'/result/'+first_str+'_'+time_str
     result_logs_path=experiment_path+'/result/'+first_str+'_'+time_str+'/logs'
@@ -88,10 +90,10 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
         tet_lambda=args.loss_lambda
         tet_means=args.loss_means
     
-    # observe_tic=False
-    # if args.observe_tic:
-    #     observe_tic=True
-    #     tic_epochs=args.tic_epochs.split('-')
+    observe_fi=False
+    if args.observe_fi:
+        observe_fi=True
+        fi_epochs=[int(tic_epoch) for tic_epoch in args.fi_epochs.split('-')]
     
     weight_decay=False
     if args.weight_decay is not None:
@@ -126,7 +128,7 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
                         if reg_loss:
                             loss=TRT_Loss(model,output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
                         elif tet_loss:
-                            loss=TET_loss(output,labels,criterion,tet_means,tet_lambda)
+                            loss=TET_Loss(output,labels,criterion,tet_means,tet_lambda)
                         output=output.mean(1)
                     else:
                         output=model(img)
@@ -147,9 +149,9 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
                 if reg_loss or tet_loss:
                     output=model(img,True)
                     if reg_loss:
-                        loss=TRT_Loss(output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
+                        loss=TRT_Loss(model,output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
                     elif tet_loss:
-                        loss=TET_loss(output,labels,criterion,tet_means,tet_lambda)
+                        loss=TET_Loss(output,labels,criterion,tet_means,tet_lambda)
                     output=output.mean(1)
                 else:
                     output=model(img)
@@ -178,8 +180,13 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
             #            experiment_path+f'/result/{surrogate_type}_{epoch+1}_{test_loss}_{test_acc}.pth')
             # first_str=model.train_mode+'_'+[string for string in filter(lambda x:x!='',re.split(r'[.>\']+',str(type(model))))][-1]
             param=args.surrogate_param
+            if not observe_fi:
+                torch.save(model.cpu().state_dict(),
+                           result_weight_path+f'/{first_str}_{args.surrogate_type}{param}_{epoch+1}_{test_loss}_{test_acc}.pth')
+                model.to(device)
+        if observe_fi and epoch+1 in fi_epochs:
             torch.save(model.cpu().state_dict(),
-                        result_weight_path+f'/{first_str}_{args.surrogate_type}{param}_{epoch+1}_{test_loss}_{test_acc}.pth')
+                       result_weight_path+f'/{first_str}_{epoch+1}.pth')
             model.to(device)
         if scheduler is not None:
             scheduler.step()
@@ -202,6 +209,10 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
     logging.info(f'Best test accuracy: {best_test_acc} at epoch {best_epoch}')
     # pd.DataFrame({"train_loss":train_loss_list,"test_loss":test_loss_list,"train_acc":train_acc_list,"test_acc":test_acc_list}).to_csv(
     #     experiment_path+'/result/curve.csv')
+    if observe_fi:
+        for epoch in fi_epochs:
+            model.load_state_dict(torch.load(result_weight_path+f'/{first_str}_{epoch}.pth'))
+            FI_observation(model,train_data_loader,epoch,args.T,device,logging,writer)
     writer.close()
 
 def evaluate(model:torch.nn.Module,test_data_loader:DataLoader,criterion:Any,device:torch.device) -> tuple:
