@@ -180,10 +180,9 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
             #            experiment_path+f'/result/{surrogate_type}_{epoch+1}_{test_loss}_{test_acc}.pth')
             # first_str=model.train_mode+'_'+[string for string in filter(lambda x:x!='',re.split(r'[.>\']+',str(type(model))))][-1]
             param=args.surrogate_param
-            if not observe_fi:
-                torch.save(model.cpu().state_dict(),
-                           result_weight_path+f'/{first_str}_{args.surrogate_type}{param}_{epoch+1}_{test_loss}_{test_acc}.pth')
-                model.to(device)
+            torch.save(model.cpu().state_dict(),
+                        result_weight_path+f'/{first_str}_{args.surrogate_type}{param}_{epoch+1}_{test_loss}_{test_acc}.pth')
+            model.to(device)
         if observe_fi and epoch+1 in fi_epochs:
             torch.save(model.cpu().state_dict(),
                        result_weight_path+f'/{first_str}_{epoch+1}.pth')
