@@ -11,7 +11,7 @@ from tensorboardX import SummaryWriter
 import time
 import logging
 from argparse import Namespace
-from function import TRT_Loss,TET_Loss,FI_observation
+from function import TRT_Loss,TET_Loss,FI_Observation
 
 def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test_data_loader:DataLoader,device:torch.device,
           experiment_path:str) -> None:
@@ -209,7 +209,7 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
     if observe_fi:
         for epoch in fi_epochs:
             model.load_state_dict(torch.load(result_weight_path+f'/FI_{first_str}_{epoch}.pth'))
-            FI_observation(model,train_data_loader,epoch,args.T,device,logging,writer)
+            FI_Observation(model,train_data_loader,epoch,args.T,device,logging,writer)
     writer.close()
 
 def evaluate(model:torch.nn.Module,test_data_loader:DataLoader,criterion:Any,device:torch.device) -> tuple:

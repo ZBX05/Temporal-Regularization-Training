@@ -95,13 +95,13 @@ def TET_Loss(outputs:torch.Tensor,labels:torch.Tensor,criterion:Any,means:float,
         Loss_mmd=0
     return (1-lamb)*Loss_es+lamb*Loss_mmd # L_Total
 
-def FI_observation(model:torch.nn.Module,train_data_loader:torch.utils.data.DataLoader,epoch:int,T:int,device:torch.device,logging:logging,
+def FI_Observation(model:torch.nn.Module,train_data_loader:torch.utils.data.DataLoader,epoch:int,T:int,device:torch.device,logging:logging,
                    writer:SummaryWriter) -> None:
     print('Start to calculate the Fisher Information in epoch {:3d}'.format(epoch))
     logging.info('Start to calculate the Fisher Information in epoch {:3d}'.format(epoch))
     fisherlist=[[] for _ in range(T)]
     ep_fisher_list=[]
-    N=len(train_data_loader)
+    N=len(train_data_loader.dataset)
     for t in range(1,T+1):
         params={n:p for n,p in model.named_parameters() if p.requires_grad}
         precision_matrices={}
@@ -120,7 +120,7 @@ def FI_observation(model:torch.nn.Module,train_data_loader:torch.utils.data.Data
 
             for n,p in model.named_parameters():
                 if p.grad is not None:
-                    precision_matrices[n].data+=p.grad.data**2/N
+                    precision_matrices[n].data+=p.grad.data**2
 
             # if step==len(train_data_loader)-1:
             #     break
@@ -130,7 +130,7 @@ def FI_observation(model:torch.nn.Module,train_data_loader:torch.utils.data.Data
         for p in precision_matrices:
             weight=precision_matrices[p]
             fisher_trace_info+=weight.sum()
-        # fisher_trace_info/=len(train_data_loader.dataset)
+        fisher_trace_info/=N
 
         print('Time: {:2d} | FisherInfo: {:4f}'.format(t,fisher_trace_info))
         logging.info('Time: {:2d} | FisherInfo: {:4f}'.format(t,fisher_trace_info))
