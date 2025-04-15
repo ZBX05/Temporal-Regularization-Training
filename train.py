@@ -23,8 +23,6 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
         first_str=f'REG({args.criterion})_'+first_str
     else:
         first_str=args.criterion+'_'+first_str
-    if args.observe_fi:
-        first_str='FI_'+first_str
     time_str=time.strftime(r'%Y-%m-%d_%H-%M-%S')
     result_root_path=experiment_path+'/result/'+first_str+'_'+time_str
     result_logs_path=experiment_path+'/result/'+first_str+'_'+time_str+'/logs'
@@ -185,7 +183,7 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
             model.to(device)
         if observe_fi and epoch+1 in fi_epochs:
             torch.save(model.cpu().state_dict(),
-                       result_weight_path+f'/{first_str}_{epoch+1}.pth')
+                       result_weight_path+f'/FI_{first_str}_{epoch+1}.pth')
             model.to(device)
         if scheduler is not None:
             scheduler.step()
@@ -210,7 +208,7 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
     #     experiment_path+'/result/curve.csv')
     if observe_fi:
         for epoch in fi_epochs:
-            model.load_state_dict(torch.load(result_weight_path+f'/{first_str}_{epoch}.pth'))
+            model.load_state_dict(torch.load(result_weight_path+f'/FI_{first_str}_{epoch}.pth'))
             FI_observation(model,train_data_loader,epoch,args.T,device,logging,writer)
     writer.close()
 
