@@ -99,7 +99,7 @@ def FI_Observation(model:torch.nn.Module,train_data_loader:torch.utils.data.Data
                    writer:SummaryWriter) -> None:
     print('Start to calculate the Fisher Information in epoch {:3d}'.format(epoch))
     logging.info('Start to calculate the Fisher Information in epoch {:3d}'.format(epoch))
-    fisherlist=[[] for _ in range(T)]
+    # fisherlist=[[] for _ in range(T)]
     ep_fisher_list=[]
     N=len(train_data_loader.dataset)
     for t in range(1,T+1):
@@ -134,7 +134,7 @@ def FI_Observation(model:torch.nn.Module,train_data_loader:torch.utils.data.Data
 
         print('Time: {:2d} | FisherInfo: {:4f}'.format(t,fisher_trace_info))
         logging.info('Time: {:2d} | FisherInfo: {:4f}'.format(t,fisher_trace_info))
-        fisherlist[t-1].append(float(fisher_trace_info.cpu().data.numpy()))
+        # fisherlist[t-1].append(float(fisher_trace_info.cpu().data.numpy()))
         ep_fisher_list.append(float(fisher_trace_info.cpu().data.numpy()))
         writer.add_scalar(f'fisher_trace_info_curve_{epoch}',ep_fisher_list[-1],t)
 

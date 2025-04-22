@@ -2,6 +2,7 @@ __pycache__
 *.pth
 data
 test.py
+fi
 fi.py
 script.md
 script.ipynb
