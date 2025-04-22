@@ -56,6 +56,17 @@ def main():
 
     args=parser.parse_args()
 
+    seed=args.seed
+    torch.manual_seed(seed)
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED']=str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)  # if you are using multi-GPU.
+    torch.backends.cudnn.benchmark=False
+    torch.backends.cudnn.deterministic=True
+
     if args.parallel:
         gpus=args.gpu.split('-')
         os.environ['CUDA_VISIBLE_DEVICES']=gpus[0] if len(gpus)==1 else ','.join(args.gpu.split('-'))
@@ -133,16 +144,6 @@ def main():
               surrogate_param,args.surrogate_m,args.expend_time,args.init)
     if args.parallel:
         model=torch.nn.DataParallel(model)
-    seed=args.seed
-    torch.manual_seed(seed)
-    random.seed(seed)
-    os.environ['PYTHONHASHSEED']=str(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)  # if you are using multi-GPU.
-    torch.backends.cudnn.benchmark=False
-    torch.backends.cudnn.deterministic=True
     train(args,model,train_data_loader,test_data_loader,device,experiment_path)
 
 if __name__=='__main__':

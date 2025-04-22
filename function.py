@@ -115,22 +115,22 @@ def FI_Observation(model:torch.nn.Module,train_data_loader:torch.utils.data.Data
             img=img.to(device)
             labels=labels.to(device)
             output=model(img,True)
-            loss=F.nll_loss(F.log_softmax(torch.sum(output[:,:t,...],dim=1)/t,dim=0),labels)
+            loss=F.nll_loss(F.log_softmax(torch.sum(output[:,:t,...],dim=1)/t,dim=1),labels)
             loss.backward()
 
             for n,p in model.named_parameters():
                 if p.grad is not None:
-                    precision_matrices[n].data+=p.grad.data**2
+                    precision_matrices[n].data+=p.grad.data**2/100
 
-            # if step==len(train_data_loader)-1:
-            #     break
+            if step==100:
+                break
 
         precision_matrices={n:p for n,p in precision_matrices.items()}
         fisher_trace_info=0
         for p in precision_matrices:
             weight=precision_matrices[p]
             fisher_trace_info+=weight.sum()
-        fisher_trace_info/=N
+        # fisher_trace_info/=N
 
         print('Time: {:2d} | FisherInfo: {:4f}'.format(t,fisher_trace_info))
         logging.info('Time: {:2d} | FisherInfo: {:4f}'.format(t,fisher_trace_info))
