@@ -22,6 +22,8 @@ def main():
     parser.add_argument('--dataset',type=str,choices=['MNIST','FMNIST','CIFAR10','CIFAR100','DVSCIFAR10','ImageNet100'],default='MNIST',help='Choice of the dataset: MNIST (MNIST), Fashion-MNIST (FMNIST), CIFAR-10 (CIFAR10), CIFAR10-DVS (DVSCIFAR10). Default: MNIST.')
     parser.add_argument('--augment',type=int,default=1,help='Whether to use cutout for CIFAR-10 and CIFAR10-DVS. Default: True.')
     #Training
+    parser.add_argument('--save_checkpoint',type=int,default=0,help='Whether to save the checkpoints. Default: False.')
+    parser.add_argument('--checkpoint_epochs',type=str,default='150-200-250',help='Epochs for saving the checkpoints. Default: 150-200-250.')
     parser.add_argument('--observe_fi',type=int,default=0,help='Whether to observe the Fisher Information. Default: False.')
     parser.add_argument('--fi_epochs',type=str,default='20-40-60-80-100-120-200-300',help='Checkpoints for FI observation. Default: 20-40-60-80-100-120-200-300.')
     parser.add_argument('--optimizer',choices=['SGD','AdamW','Adam','RMSprop'],default='Adam',help='Choice of the optimizer - stochastic gradient descent with 0.9 momentum (SGD), SGD with 0.9 momentum and AdamW (AdamW), Adam (Adam), and RMSprop (RMSprop). Default: AdamW.')
@@ -30,6 +32,7 @@ def main():
     parser.add_argument('--criterion',choices=['MSE','BCE','CE'], default='CE',help='Choice of criterion (loss function) - mean squared error (MSE), binary cross entropy (BCE), cross entropy (CE, which already contains a logsoftmax activation function). Default: MSE.')
     parser.add_argument('--tetloss',type=int,default=0)
     parser.add_argument('--loss_means',type=float,default=1.0)
+    parser.add_argument('--resumeloss',type=int,default=0)
     parser.add_argument('--regloss',type=int,default=1,help='Whether to use the Temporal Regularization Training method. Default: False.')
     parser.add_argument('--loss_decay',type=float,default=0.5,help='Means afctor for Temporal Regularization Training loss function, make all the potential increment around the means. Default: 0.5.')
     parser.add_argument('--loss_lambda',type=float,default=1e-5,help='Lambda factor for Temporal Regularization Training loss function. Default: 0.00001.')
@@ -42,6 +45,8 @@ def main():
     parser.add_argument('--lr',type=float,default=1e-3,help='Learning rate. Default: 1e-3.')
     parser.add_argument('--scheduler',type=int,default=1,help='Whether to use a learning rate scheduler (CosineAnnealingLR). Default: False.')
     parser.add_argument('--amp',type=int,default=1)
+    parser.add_argument('--resume',type=int,default=0,help='Whether to resume training from a checkpoint. Default: False.')
+    parser.add_argument('--resume_path',type=str,default='',help='Path to the checkpoint for resuming training.')
     # Network 'CONV_32_5_1_2_FC_1000_FC_10'
     parser.add_argument('--init',type=int,default=1)
     parser.add_argument('--topology',type=str,default='CONV-28-5-1-2_FC-1000_FC-10',help='Choice of network topology. Format for convolutional layers: CONV_{output channels}-{kernel size}-{stride}-{padding}. Format for fully-connected layers: FC-{output units}.')

@@ -23,6 +23,10 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
         first_str=f'REG({args.criterion})_'+first_str
     else:
         first_str=args.criterion+'_'+first_str
+    if args.resume:
+        checkpoint=torch.load(args.resume_path)
+        epoch_resume=checkpoint["epoch"]
+        first_str=f'Resume_{epoch_resume+1}_'+first_str
     time_str=time.strftime(r'%Y-%m-%d_%H-%M-%S')
     result_root_path=experiment_path+'/result/'+first_str+'_'+time_str
     result_logs_path=experiment_path+'/result/'+first_str+'_'+time_str+'/logs'
@@ -102,6 +106,23 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
         get_backward_loss=lambda loss:loss.mean()
     else:
         get_backward_loss=lambda loss:loss
+    
+    save_checkpoint=False
+    if args.save_checkpoint:
+        save_checkpoint=True
+        checkpoint_epochs=[int(epoch) for epoch in args.checkpoint_epochs.split('-')]
+
+    if args.resume:
+        # checkpoint=torch.load(args.resume_path)
+        # epoch_resume=checkpoint['epoch']
+        model.load_state_dict(checkpoint["model_state_dict"])
+        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+        loss=checkpoint["loss"]
+        if amp:
+            scaler.load_state_dict(checkpoint["scaler"])
+    else:
+        epoch_resume=0
 
     best_test_acc=0
     best_test_loss=0
@@ -110,7 +131,7 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
     test_acc_list=[]
     train_loss_list=[]
     test_loss_list=[]
-    for epoch in range(epochs):
+    for epoch in range(epoch_resume,epochs):
         model.train()
         train_loss=0
         train_acc=0
@@ -185,6 +206,15 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
             torch.save(model.cpu().state_dict(),
                        result_weight_path+f'/FI_{first_str}_{epoch+1}.pth')
             model.to(device)
+        if save_checkpoint and epoch+1 in checkpoint_epochs:
+            torch.save({
+                "epoch":epoch,
+                "model_state_dict":model.state_dict(),
+                "optimizer_state_dict":optimizer.state_dict(),
+                "scheduler_state_dict":scheduler.state_dict() if scheduler is not None else None,
+                "loss":loss,
+                "scaler":scaler.state_dict() if amp else None
+            },result_weight_path+f'/checkpoint_{first_str}_{epoch+1}.pth')
         if scheduler is not None:
             scheduler.step()
         train_loss/=train_samples

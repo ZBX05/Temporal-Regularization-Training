@@ -73,11 +73,7 @@ def TRT_Loss(model:torch.nn.Module,outputs:torch.Tensor,labels:torch.Tensor,crit
                 reg+=torch.sum(param**2*decay_factor)
         if eta!=0:
             sup_loss=mse_loss(outputs[:,t,...].float(),labels_one_hot)
-            # sup_loss+=mse_loss(outputs[:,t,...].float(),labels_one_hot)
-        # loss+=label_loss+reg
         loss+=(1-eta)*label_loss+eta*sup_loss+reg
-    # if eta!=0:
-        # loss=(1-eta)*loss+eta*sup_loss
     loss=loss/T
     return loss
 
