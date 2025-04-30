@@ -145,7 +145,7 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
             optimizer.zero_grad()
             if amp:
                 with torch.amp.autocast(device_type='cuda' if not args.cpu else 'cpu'):
-                    if reg_loss or tet_loss:
+                    if reg_loss or ert_loss or tet_loss:
                         output=model(img,True)
                         if reg_loss:
                             loss=TRT_Loss(model,output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
@@ -170,7 +170,7 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
                     scaler.step(optimizer)
                     scaler.update()
             else:
-                if reg_loss or tet_loss:
+                if reg_loss or ert_loss or tet_loss:
                     output=model(img,True)
                     if reg_loss:
                         loss=TRT_Loss(model,output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
