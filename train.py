@@ -11,7 +11,7 @@ from tensorboardX import SummaryWriter
 import time
 import logging
 from argparse import Namespace
-from function import TRT_Loss,TET_Loss,FI_Observation
+from function import TRT_Loss,TET_Loss,ERT_Loss,FI_Observation
 
 def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test_data_loader:DataLoader,device:torch.device,
           experiment_path:str) -> None:
@@ -21,6 +21,8 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
     first_str='T'+str(args.T)+'_'+args.surrogate_type+f'_{norm_str}'+topology
     if args.regloss:
         first_str=f'REG({args.criterion})_'+first_str
+    elif args.ertloss:
+        first_str=f'ERT({args.criterion})_'+first_str
     else:
         first_str=args.criterion+'_'+first_str
     if args.resume:
@@ -80,7 +82,8 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
          scaler=GradScaler(device='cuda' if not args.cpu else 'cpu')
     
     reg_loss=args.regloss
-    if reg_loss:
+    ert_loss=args.ertloss
+    if reg_loss or ert_loss:
         loss_lambda=args.loss_lambda
         loss_decay=args.loss_decay
         loss_epsilon=args.loss_epsilon
@@ -146,6 +149,8 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
                         output=model(img,True)
                         if reg_loss:
                             loss=TRT_Loss(model,output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
+                        elif ert_loss:
+                            loss=ERT_Loss(model,output,labels,criterion,loss_decay,loss_lambda,loss_epsilon)
                         elif tet_loss:
                             loss=TET_Loss(output,labels,criterion,tet_means,tet_lambda)
                         output=output.mean(1)
@@ -169,6 +174,8 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
                     output=model(img,True)
                     if reg_loss:
                         loss=TRT_Loss(model,output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
+                    elif ert_loss:
+                        loss=ERT_Loss(model,output,labels,criterion,loss_decay,loss_lambda,loss_epsilon)
                     elif tet_loss:
                         loss=TET_Loss(output,labels,criterion,tet_means,tet_lambda)
                     output=output.mean(1)
