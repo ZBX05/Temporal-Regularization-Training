@@ -56,8 +56,8 @@ def main():
     parser.add_argument('--v_threshold',type=float,default=1.0,help='Threshold potential for spiking neurons. Default: 0.5.')
     parser.add_argument('--v_reset',type=float,default=0.0,help='Reset potential for spiking neurons. Default: 0.')
     parser.add_argument('--tau',type=float,default=2.0,help='Time constant for spiking neurons, decay factor equals to 1/tau. Default: 5.0')
-    parser.add_argument('--surrogate_type',choices=['sigmoid','zo','pseudo','triangle','asgl'],default='triangle',help='Choice of surrogate function for spiking neurons - sigmoid (sigmoid), dynamic zeroth order method (dzo), zeroth order method (zo), and pseudo-bp (pseudo). Default: dzo.')
-    parser.add_argument('--surrogate_m',type=float,default=5)
+    parser.add_argument('--surrogate_type',choices=['sigmoid','triangle'],default='triangle',help='Choice of surrogate function for spiking neurons - sigmoid (sigmoid), dynamic zeroth order method (dzo), zeroth order method (zo), and pseudo-bp (pseudo). Default: dzo.')
+    # parser.add_argument('--surrogate_m',type=float,default=5)
     parser.add_argument('--surrogate_param',type=float,default=1.0)
 
     args=parser.parse_args()
@@ -131,10 +131,10 @@ def main():
 
     surrogate_param=args.surrogate_param
     
-    if args.surrogate_type!='asgl':
-        assert args.surrogate_m>0,'m must be an integer greater than 0.'
-    else:
-        assert 0<=args.surrogate_m<=1.0,'m indicates the probability of the spike mask, must be in [0,1].' 
+    # if args.surrogate_type!='asgl':
+    #     assert args.surrogate_m>0,'m must be an integer greater than 0.'
+    # else:
+    #     assert 0<=args.surrogate_m<=1.0,'m indicates the probability of the spike mask, must be in [0,1].' 
     assert args.tau>=1,'tau must be greater than or equal to 1.0.'
     assert not(args.regloss and args.criterion=='MSE'),'MSE is not supported in TET.'
 
@@ -147,7 +147,7 @@ def main():
         args.weight_decay={"type":'l2',"decay":args.l2}
 
     model=SNN(args.topology,args.T,input_shape,args.dropout,args.norm,args.v_threshold,args.v_reset,args.tau,args.surrogate_type,
-              surrogate_param,args.surrogate_m,args.expend_time,args.init)
+              surrogate_param,args.expend_time,args.init)
     if args.parallel:
         model=torch.nn.DataParallel(model)
     train(args,model,train_data_loader,test_data_loader,device,experiment_path)

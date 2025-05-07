@@ -16,17 +16,12 @@ def rectangle(x:torch.Tensor,param:torch.Tensor) -> torch.Tensor:
 
 class ActFun(torch.autograd.Function):
     @staticmethod
-    def forward(ctx,input,surrogate_type,param,m=None):
+    def forward(ctx,input,surrogate_type,param):
         if not isinstance(param,torch.Tensor):
             param=torch.tensor([param],device=input.device)
         ctx.save_for_backward(input,param)
         ctx.in_1=surrogate_type
-        ctx.in_2=m
-        if surrogate_type!='asgl':
-            output=input.gt(0).float()
-        else:
-            h_s=rectangle(input,param)
-            output=h_s+((input.gt(0).float()-h_s)*m).detach()
+        output=input.gt(0).float()
         return output # spike=(mem-self.v_threshold)>0
 
     @staticmethod
@@ -34,25 +29,13 @@ class ActFun(torch.autograd.Function):
         grad_input=grad_output.clone()
         input,param=ctx.saved_tensors
         surrogate_type=ctx.in_1
-        surrogate_m=ctx.in_2
         param=param.item() if param.shape[0]==1 else param
         param_grad=None
         if surrogate_type=='sigmoid':
             sgax=1/(1+torch.exp(-param*input))
             grad_surrogate=param*(1-sgax)*sgax
-        elif surrogate_type=='zo':
-            sample_size=surrogate_m
-            abs_z=torch.abs(torch.randn((sample_size,)+input.size(),device=input.device,dtype=torch.float))
-            t=torch.abs(input[None,:,:])<abs_z*param
-            grad_surrogate=torch.mean(t*abs_z,dim=0)/(2*param)
         elif surrogate_type=='triangle':
             grad_surrogate=(1/param)*(1/param)*((param-input.abs()).clamp(min=0))
-        elif surrogate_type=='pseudo':
-            grad_surrogate=abs(input)<param
-        elif surrogate_type=='asgl':
-            t=torch.abs(input)<1/(2*torch.exp(param))
-            grad_surrogate=t*torch.exp(param)
-            param_grad=t*torch.exp(param)*input*grad_input
         else:
             raise NameError('Surrogate type '+str(surrogate_type)+' is not supported!')
         return grad_surrogate.float()*grad_input,None,param_grad,None

@@ -57,13 +57,12 @@ class FlattenBlock(BaseBlock):
 
 class FCBlock(BaseBlock):
     def __init__(self,input_size:int,output_size:int,bias:bool,dropout:float,v_threshold:float=1.0,v_reset:float=0.0,tau:float=5,
-                 surrogate_type:str='sigmoid',surrogate_param:float=2.0,surrogate_m:int=5) -> None:
+                 surrogate_type:str='sigmoid',surrogate_param:float=2.0) -> None:
         super(FCBlock,self).__init__()
         self.fc=SeqToANNContainer(
             nn.Linear(input_size,output_size,bias=bias)
         )
-        self.lif=LIFNode(v_threshold=v_threshold,v_reset=v_reset,tau=tau,surrogate_type=surrogate_type,surrogate_param=surrogate_param,
-                         surrogate_m=surrogate_m)
+        self.lif=LIFNode(v_threshold=v_threshold,v_reset=v_reset,tau=tau,surrogate_type=surrogate_type,surrogate_param=surrogate_param)
         if dropout!=0:
             self.dropout=nn.Dropout(p=dropout)
         else:
@@ -79,7 +78,7 @@ class FCBlock(BaseBlock):
 class Conv2dBlock(BaseBlock):
     def __init__(self,norm:str,input_shape:tuple,in_channels:int,out_channels:int,conv_kernel_size:int,conv_stride:int,conv_padding:int,
                  pool_kernel_size:int,pool_stride:int,pool_padding:int,bias:bool,v_threshold:float=1.0,v_reset:float=0.0,tau:float=5,
-                 surrogate_type:str='sigmoid',surrogate_param:float=2.0,surrogate_m:int=5) -> None:
+                 surrogate_type:str='sigmoid',surrogate_param:float=2.0) -> None:
         super(Conv2dBlock,self).__init__()
         self.out_channels=out_channels
         self.conv_kernel_size=conv_kernel_size
@@ -111,8 +110,7 @@ class Conv2dBlock(BaseBlock):
         self.conv2d_output_height=self.get_conv2d_output_dim(input_height)
         self.conv2d_output_width=self.get_conv2d_output_dim(input_width)
         self.output_height,self.output_width=self.get_conv2d_block_output_dim(input_height,input_width)
-        self.lif=LIFNode(v_threshold=v_threshold,v_reset=v_reset,tau=tau,surrogate_type=surrogate_type,surrogate_param=surrogate_param,
-                         surrogate_m=surrogate_m)
+        self.lif=LIFNode(v_threshold=v_threshold,v_reset=v_reset,tau=tau,surrogate_type=surrogate_type,surrogate_param=surrogate_param)
     
     def forward(self,input:torch.Tensor) -> torch.Tensor:
         x=self.conv2d_layer(input)
@@ -142,10 +140,10 @@ class Conv2dBlock(BaseBlock):
 class Conv2dAPBlock(Conv2dBlock):
     def __init__(self,norm:str,input_shape:tuple,in_channels:int,out_channels:int,conv_kernel_size:int,conv_stride:int,conv_padding:int,
                  pool_kernel_size:int,pool_stride:int,pool_padding:int,bias:bool,v_threshold:float=1.0,v_reset:float=0.0,tau:float=5,
-                 surrogate_type:str='sigmoid',surrogate_param:float=2.0,surrogate_m:int=5) -> None:
+                 surrogate_type:str='sigmoid',surrogate_param:float=2.0) -> None:
         super(Conv2dAPBlock,self).__init__(norm,input_shape,in_channels,out_channels,conv_kernel_size,conv_stride,conv_padding,
                                                   pool_kernel_size,pool_stride,pool_padding,bias,v_threshold,v_reset,tau,surrogate_type,
-                                                  surrogate_param,surrogate_m)
+                                                  surrogate_param)
         self.maxpool2d_layer=SeqToANNContainer(
             nn.AvgPool2d(pool_kernel_size,pool_stride,pool_padding)
         )
@@ -153,9 +151,9 @@ class Conv2dAPBlock(Conv2dBlock):
 class Conv2dNoPoolingBlock(Conv2dBlock):
     def __init__(self,norm:str,input_shape:tuple,in_channels:int,out_channels:int,conv_kernel_size:int,conv_stride:int,conv_padding:int,
                  bias:bool,v_threshold:float=1.0,v_reset:float=0.0,tau:float=5,surrogate_type:str='sigmoid',
-                 surrogate_param:float=2.0,surrogate_m:int=5) -> None:
+                 surrogate_param:float=2.0) -> None:
         super(Conv2dNoPoolingBlock,self).__init__(norm,input_shape,in_channels,out_channels,conv_kernel_size,conv_stride,conv_padding,
-                                                  2,2,0,bias,v_threshold,v_reset,tau,surrogate_type,surrogate_param,surrogate_m)
+                                                  2,2,0,bias,v_threshold,v_reset,tau,surrogate_type,surrogate_param)
         self.maxpool2d_layer=None
         
         if len(input_shape)==2:
@@ -175,10 +173,10 @@ class Conv2dNoPoolingBlock(Conv2dBlock):
 class Conv2dEncoderBlock(Conv2dBlock):
     def __init__(self,T:int,norm:str,input_shape:tuple,in_channels:int,out_channels:int,conv_kernel_size:int,conv_stride:int,conv_padding:int,
                  pool_kernel_size:int,pool_stride:int,pool_padding:int,bias:bool,v_threshold:float=1.0,v_reset:float=0.0,tau:float=5,
-                 surrogate_type:str='sigmoid',surrogate_param:float=2.0,surrogate_m:int=5) -> None:
+                 surrogate_type:str='sigmoid',surrogate_param:float=2.0) -> None:
         super(Conv2dEncoderBlock,self).__init__(norm,input_shape,in_channels,out_channels,conv_kernel_size,conv_stride,conv_padding,
                                                 pool_kernel_size,pool_stride,pool_padding,bias,v_threshold,v_reset,tau,surrogate_type,
-                                                surrogate_param,surrogate_m)
+                                                surrogate_param)
         self.time_expension_layer=TimeExpensionBlock(T,1)
         if self.norm=='tdBN':
             self.conv2d_layer=nn.Sequential(
@@ -201,7 +199,7 @@ class Conv2dEncoderBlock(Conv2dBlock):
 class ResidualBlock(BaseBlock):
     def __init__(self,norm:str,input_shape:tuple,in_channels:int,out_channels:int,conv_kernel_size:tuple,conv_stride:tuple,conv_padding:tuple,
                  pool:bool,downsample:bool,bias:bool,v_threshold:float=1.0,v_reset:float=0.0,tau:float=5,surrogate_type:str='sigmoid',
-                 surrogate_param:float=2.0,surrogate_m:int=5) -> None:
+                 surrogate_param:float=2.0) -> None:
         super(ResidualBlock,self).__init__()
         self.norm=norm
         self.pool=pool
@@ -248,10 +246,8 @@ class ResidualBlock(BaseBlock):
             self.adaptive_avgpool_layer=SeqToANNContainer(
                 nn.AdaptiveAvgPool2d((1,1))
             )
-        self.lif_1=LIFNode(v_threshold=v_threshold,v_reset=v_reset,tau=tau,surrogate_type=surrogate_type,surrogate_param=surrogate_param,
-                           surrogate_m=surrogate_m)
-        self.lif_2=LIFNode(v_threshold=v_threshold,v_reset=v_reset,tau=tau,surrogate_type=surrogate_type,surrogate_param=surrogate_param,
-                           surrogate_m=surrogate_m)
+        self.lif_1=LIFNode(v_threshold=v_threshold,v_reset=v_reset,tau=tau,surrogate_type=surrogate_type,surrogate_param=surrogate_param)
+        self.lif_2=LIFNode(v_threshold=v_threshold,v_reset=v_reset,tau=tau,surrogate_type=surrogate_type,surrogate_param=surrogate_param)
     
     def forward(self,input:torch.Tensor) -> torch.Tensor:
         identity=input
@@ -289,9 +285,9 @@ class ResidualBlock(BaseBlock):
 class SEWResidualBlock(ResidualBlock):
     def __init__(self,connect_function:str,norm:str,input_shape:tuple,in_channels:int,out_channels:int,conv_kernel_size:tuple,conv_stride:tuple,
                  conv_padding:tuple,pool:bool,downsample:bool,bias:bool,v_threshold:float=1.0,v_reset:float=0.0,tau:float=5,
-                 surrogate_type:str='sigmoid',surrogate_param:float=2.0,surrogate_m:int=5) -> None:
+                 surrogate_type:str='sigmoid',surrogate_param:float=2.0) -> None:
         super(SEWResidualBlock,self).__init__(norm,input_shape,in_channels,out_channels,conv_kernel_size,conv_stride,conv_padding,pool,
-                                              downsample,bias,v_threshold,v_reset,tau,surrogate_type,surrogate_param,surrogate_m)
+                                              downsample,bias,v_threshold,v_reset,tau,surrogate_type,surrogate_param)
         if connect_function=='ADD':
             self.connect_function=lambda x,identity:x+identity
         elif connect_function=='AND':
@@ -305,16 +301,14 @@ class SEWResidualBlock(ResidualBlock):
                     nn.Conv2d(in_channels,out_channels,1,conv_stride[0],0,bias=bias),
                     nn.BatchNorm2d(out_channels)
                 ),
-                LIFNode(v_threshold=v_threshold,v_reset=v_reset,tau=tau,surrogate_type=surrogate_type,surrogate_param=surrogate_param,
-                        surrogate_m=surrogate_m)
+                LIFNode(v_threshold=v_threshold,v_reset=v_reset,tau=tau,surrogate_type=surrogate_type,surrogate_param=surrogate_param)
             )
         elif self.downsample and self.norm!='tdBN':
             self.downsample_layer=nn.Sequential(
                 SeqToANNContainer(
                     nn.Conv2d(in_channels,out_channels,1,conv_stride[0],0,bias=bias)
                 ),
-                LIFNode(v_threshold=v_threshold,v_reset=v_reset,tau=tau,surrogate_type=surrogate_type,surrogate_param=surrogate_param,
-                        surrogate_m=surrogate_m)
+                LIFNode(v_threshold=v_threshold,v_reset=v_reset,tau=tau,surrogate_type=surrogate_type,surrogate_param=surrogate_param)
             )
     
     def forward(self,input:torch.Tensor) -> torch.Tensor:

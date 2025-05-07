@@ -5,7 +5,7 @@ from module import *
 
 class SNN(nn.Module):
     def __init__(self,topology:str,T:int,input_shape:tuple,dropout:float,norm:str,v_threshold:float,v_reset:float,tau:float,
-                 surrogate_type:str,surrogate_param:float,surrogate_m:int,expend_time:bool,init:bool) -> None:
+                 surrogate_type:str,surrogate_param:float,expend_time:bool,init:bool) -> None:
         super(SNN,self).__init__()
         self.expend_time=expend_time
         self.layers=nn.Sequential()
@@ -16,7 +16,6 @@ class SNN(nn.Module):
         self.tau=tau
         self.surrogate_type=surrogate_type
         self.surrogate_param=surrogate_param
-        self.surrogate_m=surrogate_m
         
         # Build custom SNN
         self.topology=topology.split('_')
@@ -55,8 +54,7 @@ class SNN(nn.Module):
                             v_reset=v_reset,
                             tau=tau,
                             surrogate_type=surrogate_type,
-                            surrogate_param=surrogate_param,
-                            surrogate_m=surrogate_m
+                            surrogate_param=surrogate_param
                         ))
                     elif layer[0]=='CONVNP':
                         self.layers.append(Conv2dNoPoolingBlock(
@@ -72,8 +70,7 @@ class SNN(nn.Module):
                             v_reset=v_reset,
                             tau=tau,
                             surrogate_type=surrogate_type,
-                            surrogate_param=surrogate_param,
-                            surrogate_m=surrogate_m
+                            surrogate_param=surrogate_param
                         ))
                     elif layer[0]=='CONVAP':
                         self.layers.append(Conv2dAPBlock(
@@ -92,8 +89,7 @@ class SNN(nn.Module):
                             v_reset=v_reset,
                             tau=tau,
                             surrogate_type=surrogate_type,
-                            surrogate_param=surrogate_param,
-                            surrogate_m=surrogate_m
+                            surrogate_param=surrogate_param
                         ))
                     elif layer[0]=='CONVEN':
                         self.layers.append(Conv2dEncoderBlock(
@@ -113,8 +109,7 @@ class SNN(nn.Module):
                             v_reset=v_reset,
                             tau=tau,
                             surrogate_type=surrogate_type,
-                            surrogate_param=surrogate_param,
-                            surrogate_m=surrogate_m
+                            surrogate_param=surrogate_param
                         ))
                     output_dim=self.layers[-1].output_height*self.layers[-1].output_width*self.layers[-1].out_channels
                 elif layer[0]=='RES' or 'SEWRES' in layer[0]:
@@ -149,8 +144,7 @@ class SNN(nn.Module):
                             v_reset=v_reset,
                             tau=tau,
                             surrogate_type=surrogate_type,
-                            surrogate_param=surrogate_param,
-                            surrogate_m=surrogate_m
+                            surrogate_param=surrogate_param
                         ))
                     elif 'SEWRES' in layer[0]:
                         connect_function=layer[0].split('~')[1]
@@ -170,8 +164,7 @@ class SNN(nn.Module):
                             v_reset=v_reset,
                             tau=tau,
                             surrogate_type=surrogate_type,
-                            surrogate_param=surrogate_param,
-                            surrogate_m=surrogate_m
+                            surrogate_param=surrogate_param
                         ))
                 elif layer[0]=='FC' or layer[0]=='L':
                     if i==0:
@@ -201,8 +194,7 @@ class SNN(nn.Module):
                             v_reset=v_reset,
                             tau=tau,
                             surrogate_type=surrogate_type,
-                            surrogate_param=surrogate_param,
-                            surrogate_m=surrogate_m
+                            surrogate_param=surrogate_param
                         ))
                     elif layer[0]=='L':
                         self.layers.append(SeqToANNContainer(nn.Linear(input_dim,output_dim,True)))
