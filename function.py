@@ -60,20 +60,6 @@ def TRT_Loss(model:torch.nn.Module,outputs:torch.Tensor,labels:torch.Tensor,crit
     loss=loss/T
     return loss
 
-def ERT_Loss(model:torch.nn.Module,outputs:torch.Tensor,labels:torch.Tensor,criterion:Any,decay:float,lamb:float,epsilon:float,) -> torch.Tensor:
-    T=outputs.size(1)
-    loss=0
-    for t in range(T):
-        reg=0
-        label_loss=criterion(outputs[:,t,...].float(),labels)
-        for name,param in model.named_parameters():
-            if 'bias' not in name:
-                decay_factor=lamb/(1+(exp(decay*t)-1)*(torch.abs(param)+epsilon))
-                reg+=torch.sum(param**2*decay_factor)
-        loss+=label_loss+reg
-    loss=loss/T
-    return loss
-
 def TET_Loss(outputs:torch.Tensor,labels:torch.Tensor,criterion:Any,means:float,lamb:float) -> torch.Tensor:
     T=outputs.size(1)
     Loss_es=0

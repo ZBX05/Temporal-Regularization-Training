@@ -33,7 +33,6 @@ def main():
     parser.add_argument('--tetloss',type=int,default=0)
     parser.add_argument('--loss_means',type=float,default=1.0)
     parser.add_argument('--resumeloss',type=int,default=0)
-    parser.add_argument('--ertloss',type=int,default=0,help='Whether to use the Effient Regularization Training method. Default: False.')
     parser.add_argument('--regloss',type=int,default=1,help='Whether to use the Temporal Regularization Training method. Default: False.')
     parser.add_argument('--loss_decay',type=float,default=0.5,help='Means afctor for Temporal Regularization Training loss function, make all the potential increment around the means. Default: 0.5.')
     parser.add_argument('--loss_lambda',type=float,default=1e-5,help='Lambda factor for Temporal Regularization Training loss function. Default: 0.00001.')
