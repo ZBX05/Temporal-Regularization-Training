@@ -19,7 +19,7 @@ def main():
     parser.add_argument('--gpu',type=str,default='0',help='GPU(s) ID. When using parallel training, the IDs must be specified as a string of comma-separated integers, like 0-1-2-3. Default: 0.')
     parser.add_argument('--seed',type=int,default=42)
     # Dataset
-    parser.add_argument('--dataset',type=str,choices=['MNIST','FMNIST','CIFAR10','CIFAR100','DVSCIFAR10','ImageNet100'],default='MNIST',help='Choice of the dataset: MNIST (MNIST), Fashion-MNIST (FMNIST), CIFAR-10 (CIFAR10), CIFAR10-DVS (DVSCIFAR10). Default: MNIST.')
+    parser.add_argument('--dataset',type=str,choices=['MNIST','FMNIST','CIFAR10','CIFAR100','DVSCIFAR10','ImageNet100','DVSGesture128'],default='MNIST',help='Choice of the dataset: MNIST (MNIST), Fashion-MNIST (FMNIST), CIFAR-10 (CIFAR10), CIFAR10-DVS (DVSCIFAR10). Default: MNIST.')
     parser.add_argument('--augment',type=int,default=1,help='Whether to use cutout for CIFAR-10 and CIFAR10-DVS. Default: True.')
     #Training
     parser.add_argument('--save_checkpoint',type=int,default=0,help='Whether to save the checkpoints. Default: False.')
@@ -110,6 +110,14 @@ def main():
     elif args.dataset=='DVSCIFAR10':
         train_data_loader,test_data_loader,input_shape=load_dataset_dvscifar10(args.augment,experiment_path+'/data',args.batch_size,True)
         args.label_size=10
+        args.expend_time=False
+        if args.topology=='VGGSNN':
+            args.model='VGGSNN'
+            args.topology=f'CONVNP-64-3-1-1_CONVAP-128-3-1-1_CONVNP-256-3-1-1_CONVAP-256-3-1-1_CONVNP-512-3-1-1_CONVAP-512-3-1-1_CONVNP-512-3-1-1_CONVAP-512-3-1-1_L-{args.label_size}'
+    elif args.dataset=='DVSGesture128':
+        args.T=10
+        train_data_loader,test_data_loader,input_shape=load_dataset_dvsgesture128(args.T,experiment_path+'/data',args.batch_size,True)
+        args.label_size=11
         args.expend_time=False
         if args.topology=='VGGSNN':
             args.model='VGGSNN'
