@@ -115,7 +115,6 @@ def main():
             args.model='VGGSNN'
             args.topology=f'CONVNP-64-3-1-1_CONVAP-128-3-1-1_CONVNP-256-3-1-1_CONVAP-256-3-1-1_CONVNP-512-3-1-1_CONVAP-512-3-1-1_CONVNP-512-3-1-1_CONVAP-512-3-1-1_L-{args.label_size}'
     elif args.dataset=='DVSGesture128':
-        args.T=10
         train_data_loader,test_data_loader,input_shape=load_dataset_dvsgesture128(args.T,experiment_path+'/data',args.batch_size,True)
         args.label_size=11
         args.expend_time=False
