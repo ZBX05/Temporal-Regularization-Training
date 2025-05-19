@@ -158,29 +158,30 @@ class FromNP:
 #             x_aug.append(random.choice(self.transforms)(x[t,...]))
 #         return torch.stack(x_aug,dim=0)
 
-class TransformedDataset(Dataset):
-    def __init__(self,dataset:Dataset,transform:transforms.Compose=None) -> None:
-        self.dataset=dataset
-        self.transform=transform
+# class TransformedDataset(Dataset):
+#     def __init__(self,dataset:Dataset,transform:transforms.Compose=None) -> None:
+#         self.dataset=dataset
+#         self.transform=transform
 
-    def __len__(self) -> int:
-        return len(self.dataset)
+#     def __len__(self) -> int:
+#         return len(self.dataset)
 
-    def __getitem__(self,idx:int) -> tuple[torch.Tensor,torch.Tensor]:
-        data,target=self.dataset[idx]
-        if self.transform:
-            data=self.transform(data)
-        return data,target
+#     def __getitem__(self,idx:int) -> tuple[torch.Tensor,torch.Tensor]:
+#         data,target=self.dataset[idx]
+#         if self.transform:
+#             data=self.transform(data)
+#         return data,target
 
 def get_dataset(root_path:str,T:int) -> tuple[NCaltech101,NCaltech101]:
-    train_transform=transforms.Compose([FromNP(),transforms.Resize((48,48)),transforms.RandomHorizontalFlip()])
-    test_transform=transforms.Compose([FromNP(),transforms.Resize((48,48))])
-    data=NCaltech101(root=root_path,data_type='frame',frames_number=T,split_by='number')
+    # train_transform=transforms.Compose([FromNP(),transforms.Resize((48,48)),transforms.RandomHorizontalFlip()])
+    # test_transform=transforms.Compose([FromNP(),transforms.Resize((48,48))])
+    transform=transforms.Compose([FromNP(),transforms.Resize((48,48))])
+    data=NCaltech101(root=root_path,data_type='frame',frames_number=T,split_by='number',transform=transform)
     print('Spliting dataset...')
     train_data,test_data=split_to_train_test_set(train_ratio=0.9,origin_dataset=data,num_classes=101)
     print('Spliting done.')
-    train_data=TransformedDataset(train_data,train_transform)
-    test_data=TransformedDataset(test_data,test_transform)
+    # train_data=TransformedDataset(train_data,train_transform)
+    # test_data=TransformedDataset(test_data,test_transform)
     return train_data,test_data
 
 # if __name__=='__main__':
