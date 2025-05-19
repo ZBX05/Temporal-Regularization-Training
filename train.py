@@ -36,7 +36,18 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
         os.makedirs(result_logs_path)
         os.makedirs(result_weight_path)
     
-    logging.basicConfig(level=logging.INFO,filename=result_root_path+'/train.log',filemode='w')
+    if args.dataset=='NCaltech101':
+        root_logger=logging.getLogger()
+        for handler in root_logger.handlers[:]:
+            root_logger.removeHandler(handler)
+        logging.basicConfig(
+            level=logging.INFO,
+            handlers=[
+                logging.FileHandler(result_root_path+'/train.log')
+            ]
+        )
+    else:
+        logging.basicConfig(level=logging.INFO,filename=result_root_path+'/train.log',filemode='w')
     for arg in args._get_kwargs():
         logging.info(f'{arg[0]}={arg[1]}')
     logging.info(f'Model structure:\n{model}')
