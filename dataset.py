@@ -17,9 +17,6 @@ def get_data(path:str,dataset:str,augment:bool=False,T:int=None) -> tuple[Any,An
     elif dataset=='DVSCIFAR10':
         import DVSCIFAR10.dataset
         train_data,test_data=DVSCIFAR10.dataset.get_dataset(path,augment)
-    elif dataset=='DVSGesture128':
-        import DVSGesture128.dataset
-        train_data,test_data=DVSGesture128.dataset.get_dataset(path,T)
     elif dataset=='NCaltech101':
         import NCaltech101.dataset
         train_data,test_data=NCaltech101.dataset.get_dataset(path,T)
@@ -67,12 +64,6 @@ def load_dataset_imagenet100(path:str,batch_size:int,shuffle:bool) -> tuple[Data
     train_data,test_data=get_data(path,'ImageNet100')
     train_loader,test_loader=get_dataloader(train_data,test_data,batch_size,shuffle)
     data_shape=(3,224,224)
-    return train_loader,test_loader,data_shape
-
-def load_dataset_dvsgesture128(T:int,path:str,batch_size:int,shuffle:bool) -> tuple[DataLoader,DataLoader,tuple[int,int,int]]:
-    train_data,test_data=get_data(path,'DVSGesture128',T=T)
-    train_loader,test_loader=get_dataloader(train_data,test_data,batch_size,shuffle)
-    data_shape=(2,48,48)
     return train_loader,test_loader,data_shape
 
 def load_dataset_ncaltech101(T:int,path:str,batch_size:int,shuffle:bool) -> tuple[DataLoader,DataLoader,tuple[int,int,int]]:
