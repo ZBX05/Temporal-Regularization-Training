@@ -11,7 +11,7 @@ from tensorboardX import SummaryWriter
 import time
 import logging
 from argparse import Namespace
-from function import TRT_Loss,TET_Loss,FI_Observation
+from function import TRT_Loss,TET_Loss,FI_Observation,IC_Observation
 
 def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test_data_loader:DataLoader,device:torch.device,
           experiment_path:str) -> None:
@@ -107,6 +107,10 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
     if args.observe_fi:
         observe_fi=True
         fi_epochs=[int(tic_epoch) for tic_epoch in args.fi_epochs.split('-')]
+    
+    observe_ic=False
+    if args.observe_ic:
+        observe_ic=True
     
     weight_decay=False
     if args.weight_decay is not None:
@@ -213,6 +217,8 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
             torch.save(model.cpu().state_dict(),
                         result_weight_path+f'/{first_str}_{args.surrogate_type}{param}_{epoch+1}_{test_loss}_{test_acc}.pth')
             model.to(device)
+        if observe_ic:
+            IC_Observation(model,train_data_loader,epoch,args.T,device,logging,writer)
         if observe_fi and epoch+1 in fi_epochs:
             torch.save(model.cpu().state_dict(),
                        result_weight_path+f'/FI_{first_str}_{epoch+1}.pth')

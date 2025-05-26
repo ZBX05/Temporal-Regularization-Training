@@ -24,6 +24,7 @@ def main():
     #Training
     parser.add_argument('--save_checkpoint',type=int,default=0,help='Whether to save the checkpoints. Default: False.')
     parser.add_argument('--checkpoint_epochs',type=str,default='150-200-250',help='Epochs for saving the checkpoints. Default: 150-200-250.')
+    parser.add_argument('--observe_ic',type=int,default=0,help='Whether to observe the Information Centroid. Default: False.')
     parser.add_argument('--observe_fi',type=int,default=0,help='Whether to observe the Fisher Information. Default: False.')
     parser.add_argument('--fi_epochs',type=str,default='20-40-60-80-100-120-200-300',help='Checkpoints for FI observation. Default: 20-40-60-80-100-120-200-300.')
     parser.add_argument('--optimizer',choices=['SGD','AdamW','Adam','RMSprop'],default='Adam',help='Choice of the optimizer - stochastic gradient descent with 0.9 momentum (SGD), SGD with 0.9 momentum and AdamW (AdamW), Adam (Adam), and RMSprop (RMSprop). Default: AdamW.')

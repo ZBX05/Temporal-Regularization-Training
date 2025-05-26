@@ -119,3 +119,65 @@ def FI_Observation(model:torch.nn.Module,train_data_loader:torch.utils.data.Data
 
         print('Fisher list: ',ep_fisher_list)
         logging.info('Fisher list: '+str(ep_fisher_list))
+
+def IC_Observation(model:torch.nn.Module,train_data_loader:torch.utils.data.DataLoader,epoch:int,T:int,device:torch.device,logging:logging,
+                   writer:SummaryWriter) -> None:
+    print('Start to calculate the IC in epoch {:3d}'.format(epoch))
+    logging.info('Start to calculate the IC in epoch {:3d}'.format(epoch))
+    # fisherlist=[[] for _ in range(T)]
+    ep_fisher_list=[]
+    N=len(train_data_loader.dataset)
+    t_i=0
+    i=0
+    for t in range(1,T+1):
+        params={n:p for n,p in model.named_parameters() if p.requires_grad}
+        precision_matrices={}
+        for n,p in deepcopy(params).items():
+            p.data.zero_()
+            precision_matrices[n] = p.data
+        model.eval()
+
+        for step,(img,labels) in enumerate(tqdm(train_data_loader)):
+            model.zero_grad()
+            img=img.to(device)
+            labels=labels.to(device)
+            output=model(img,True)
+            loss=F.nll_loss(F.log_softmax(torch.sum(output[:,:t,...],dim=1)/t,dim=1),labels)
+            loss.backward()
+
+            for n,p in model.named_parameters():
+                if p.grad is not None:
+                    precision_matrices[n].data+=p.grad.data**2/100
+
+            if step==100:
+                break
+
+        precision_matrices={n:p for n,p in precision_matrices.items()}
+        fisher_trace_info=0
+        for p in precision_matrices:
+            weight=precision_matrices[p]
+            fisher_trace_info+=weight.sum()
+        # fisher_trace_info/=N
+
+        # print('Time: {:2d} | FisherInfo: {:4f}'.format(t,fisher_trace_info))
+        # logging.info('Time: {:2d} | FisherInfo: {:4f}'.format(t,fisher_trace_info))
+        # fisherlist[t-1].append(float(fisher_trace_info.cpu().data.numpy()))
+        fi=float(fisher_trace_info.cpu().data.numpy())
+        ep_fisher_list.append(fi)
+        t_i+=t*fi
+        i+=fi
+
+    # print('Fisher list: ',ep_fisher_list)
+    # logging.info('Fisher list: '+str(ep_fisher_list))
+
+    # ic=[]
+    # t_i=0
+    # i=0
+    # for t in range(1,T+1):
+    #     i+=ep_fisher_list[t-1]
+    #     t_i+=t*ep_fisher_list[t-1]
+    #     ic.append(t_i/i)
+    #     writer.add_scalar(f'ic',ic[-1],epoch)
+    ic=t_i/i
+    writer.add_scalar(f'ic',ic,epoch)
+    print('IC: ',ic)
