@@ -175,12 +175,6 @@ class SNN(nn.Module):
                     elif 'CONV' in self.topology[i-1].split('-')[0] or 'RES' in self.topology[i-1].split('-')[0]:
                         input_dim=self.layers[i-1].output_height*self.layers[i-1].output_width*self.layers[i-1].out_channels
                         self.layers.append(self.flatten)
-                    # TODO: Conv1dBlock
-                    # elif topology_layers[i - 1][0] == "C":
-                    #     input_dim = 1000  # /2 accounts for pooling operation of the previous convolutional layer
-                    #     # input_dim = int(output_dim)
-                    #     # print(input_dim)
-                    #     self.conv_to_fc = i
                     else:
                         input_dim=output_dim
                     output_dim=int(layer[1])
@@ -198,26 +192,6 @@ class SNN(nn.Module):
                         ))
                     elif layer[0]=='L':
                         self.layers.append(SeqToANNContainer(nn.Linear(input_dim,output_dim,True)))
-                # TODO: Conv1dBlock
-                # elif layer[0]=='C':
-                #     in_channels = input_channels if (i == 0) else out_channels
-                #     out_channels = int(layer[1])
-                #     input_dim = input_size if (i == 0) else int(output_dim / 2)  # /2 accounts for pooling operation of the previous convolutional layer
-                #     output_dim = int((input_dim + 2*int(layer[4]) - int(layer[2]) + 1) / int(layer[3]))
-                #     self.layers.append(C_block(
-                #         in_channels=in_channels,
-                #         out_channels=int(layer[1]),
-                #         kernel_size=int(layer[2]),
-                #         stride=int(layer[3]),
-                #         padding=int(layer[4]),
-                #         bias=True,
-                #         activation=conv_act,
-                #         dim_hook=[label_features, out_channels, output_dim],
-                #         label_features=label_features,
-                #         train_mode=train_mode,
-                #         batch_size=self.batch_size,
-                #         spike_window=self.spike_window
-                #     ))
                 else:
                     raise NameError('Layer construct '+str(layer[0])+' not supported!')
             except ValueError as e:
@@ -239,6 +213,20 @@ class SNN(nn.Module):
         #    for i in range(len(self.layers)):
         #        layer_output.append(self.layers[i](x))
         return x.mean(1) if not full_output else x
+    
+    def get_spike_firing_patterns(self,input:torch.Tensor,full_output:bool=False) -> tuple[torch.Tensor,list]:
+        self.eval()
+        spike_patterns=[]
+        handles=[]
+        neuron_hook=lambda module,input,output:spike_patterns.append(output.detach())
+        for i in range(len(self.layers)):
+            if hasattr(self.layers[i],'lif'):
+                handles.append(self.layers[i].lif.register_forward_hook(neuron_hook))
+        with torch.no_grad():
+            output=self.forward(input,full_output)
+        for handle in handles:
+            handle.remove()
+        return output,spike_patterns
 
 if __name__=='__main__':
     # model=SNN('CONV-64-7-2-3-3-2-1_RES-64-3=3-1=1-1=1_RES-64-3=3-1=1-1=1_RES-128-3=3-2=1-1=1_RES-128-3=3-1=1-1=1_RES-256-3=3-2=1-1=1_RES-256-3=3-1=1-1=1_RES-512-3=3-2=1-1=1_RES-512-3=3-1=1-1=1-_FC-256_L-1000',4,(3,224,224),0.0,'tdBN',0.5,0.0,5.0,'sigmoid',2.0,5,True,True)
