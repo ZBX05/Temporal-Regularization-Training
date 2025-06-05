@@ -12,4 +12,4 @@ __model.py
 __neuron.py
 .gitignore
 *.code-workspace
-DVSGesture128/
+DVSGesture/
