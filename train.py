@@ -13,7 +13,7 @@ from tensorboardX import SummaryWriter
 import time
 import logging
 from argparse import Namespace
-from function import REG_Loss
+from function import TRT_Loss,TET_Loss,FI_Observation,IC_Observation
 
 def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test_data_loader:DataLoader,device:torch.device,
           experiment_path:str) -> None:
@@ -21,10 +21,14 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
     norm_str=args.norm+'_' if args.norm!='No' and 'CONV' in args.topology else ''
     topology=args.model if args.model!='Custom' else args.topology
     first_str='T'+str(args.T)+'_'+args.surrogate_type+f'_{norm_str}'+topology
-    if args.regloss:
-        first_str=f'REG({args.criterion})_'+first_str
+    if args.trtloss:
+        first_str=f'TRT({args.criterion})_'+first_str
     else:
         first_str=args.criterion+'_'+first_str
+    if args.resume:
+        checkpoint=torch.load(args.resume_path)
+        epoch_resume=checkpoint["epoch"]
+        first_str=f'Resume_{epoch_resume+1}_'+first_str
     time_str=time.strftime(r'%Y-%m-%d_%H-%M-%S')
     result_root_path=experiment_path+'/result/'+first_str+'_'+time_str
     result_logs_path=experiment_path+'/result/'+first_str+'_'+time_str+'/logs'
@@ -34,7 +38,18 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
         os.makedirs(result_logs_path)
         os.makedirs(result_weight_path)
     
-    logging.basicConfig(level=logging.INFO,filename=result_root_path+'/train.log',filemode='w')
+    if args.dataset=='NCaltech101':
+        root_logger=logging.getLogger()
+        for handler in root_logger.handlers[:]:
+            root_logger.removeHandler(handler)
+        logging.basicConfig(
+            level=logging.INFO,
+            handlers=[
+                logging.FileHandler(result_root_path+'/train.log')
+            ]
+        )
+    else:
+        logging.basicConfig(level=logging.INFO,filename=result_root_path+'/train.log',filemode='w')
     for arg in args._get_kwargs():
         logging.info(f'{arg[0]}={arg[1]}')
     logging.info(f'Model structure:\n{model}')
@@ -78,18 +93,54 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
         # scaler=GradScaler(device='npu' if not args.cpu else 'cpu')
         scaler=GradScaler(device='cuda' if not args.cpu else 'cpu')
     
-    reg_loss=args.regloss
-    if reg_loss:
+    trt_loss=args.trtloss
+    if trt_loss:
         loss_lambda=args.loss_lambda
         loss_decay=args.loss_decay
         loss_epsilon=args.loss_epsilon
         loss_eta=args.loss_eta
         # loss_means=args.loss_means
     
+    tet_loss=args.tetloss
+    if tet_loss:
+        tet_lambda=args.loss_lambda
+        tet_means=args.loss_means
+    
+    observe_fi=False
+    if args.observe_fi:
+        observe_fi=True
+        fi_epochs=[int(tic_epoch) for tic_epoch in args.fi_epochs.split('-')]
+    
+    observe_ic=False
+    if args.observe_ic:
+        observe_ic=True
+    
     weight_decay=False
     if args.weight_decay is not None:
         weight_decay=True
         decay_dict=args.weight_decay
+    
+    if args.mean_reduce:
+        get_backward_loss=lambda loss:loss.mean()
+    else:
+        get_backward_loss=lambda loss:loss
+    
+    save_checkpoint=False
+    if args.save_checkpoint:
+        save_checkpoint=True
+        checkpoint_epochs=[int(epoch) for epoch in args.checkpoint_epochs.split('-')]
+
+    if args.resume:
+        # checkpoint=torch.load(args.resume_path)
+        # epoch_resume=checkpoint['epoch']
+        model.load_state_dict(checkpoint["model_state_dict"])
+        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+        loss=checkpoint["loss"]
+        if amp:
+            scaler.load_state_dict(checkpoint["scaler"])
+    else:
+        epoch_resume=0
 
     best_test_acc=0
     best_test_loss=0
@@ -98,7 +149,7 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
     test_acc_list=[]
     train_loss_list=[]
     test_loss_list=[]
-    for epoch in range(epochs):
+    for epoch in range(epoch_resume,epochs):
         model.train()
         train_loss=0
         train_acc=0
@@ -110,9 +161,12 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
             if amp:
                 # with torch.amp.autocast(device_type='npu' if not args.cpu else 'cpu'):
                 with torch.amp.autocast(device_type='cuda' if not args.cpu else 'cpu'):
-                    if reg_loss:
+                    if trt_loss or tet_loss:
                         output=model(img,True)
-                        loss=REG_Loss(model,output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
+                        if trt_loss:
+                            loss=TRT_Loss(model,output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
+                        elif tet_loss:
+                            loss=TET_Loss(output,labels,criterion,tet_means,tet_lambda)
                         output=output.mean(1)
                     else:
                         output=model(img)
@@ -125,13 +179,17 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
                             for name,param in model.named_parameters():
                                 if 'weight' in name:
                                     loss+=decay_dict["decay"]*norm(param)
-                    scaler.scale(loss.mean()).backward()
+                    loss=get_backward_loss(loss)
+                    scaler.scale(loss).backward()
                     scaler.step(optimizer)
                     scaler.update()
             else:
-                if reg_loss:
+                if trt_loss or tet_loss:
                     output=model(img,True)
-                    loss=REG_Loss(output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
+                    if trt_loss:
+                        loss=TRT_Loss(model,output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
+                    elif tet_loss:
+                        loss=TET_Loss(output,labels,criterion,tet_means,tet_lambda)
                     output=output.mean(1)
                 else:
                     output=model(img)
@@ -144,7 +202,8 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
                         for name,param in model.named_parameters():
                             if 'weight' in name:
                                 loss+=decay_dict["decay"]*norm(param)
-                loss.mean().backward()
+                loss=get_backward_loss(loss)
+                loss.backward()
                 optimizer.step()
             train_samples+=labels.size(0)
             train_loss+=loss.item()*labels.size(0)
@@ -162,6 +221,21 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
             torch.save(model.cpu().state_dict(),
                         result_weight_path+f'/{first_str}_{args.surrogate_type}{param}_{epoch+1}_{test_loss}_{test_acc}.pth')
             model.to(device)
+        if observe_ic:
+            IC_Observation(model,train_data_loader,epoch,args.T,device,logging,writer)
+        if observe_fi and epoch+1 in fi_epochs:
+            torch.save(model.cpu().state_dict(),
+                       result_weight_path+f'/FI_{first_str}_{epoch+1}.pth')
+            model.to(device)
+        if save_checkpoint and epoch+1 in checkpoint_epochs:
+            torch.save({
+                "epoch":epoch,
+                "model_state_dict":model.state_dict(),
+                "optimizer_state_dict":optimizer.state_dict(),
+                "scheduler_state_dict":scheduler.state_dict() if scheduler is not None else None,
+                "loss":loss,
+                "scaler":scaler.state_dict() if amp else None
+            },result_weight_path+f'/checkpoint_{first_str}_{epoch+1}.pth')
         if scheduler is not None:
             scheduler.step()
         train_loss/=train_samples
@@ -183,6 +257,10 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
     logging.info(f'Best test accuracy: {best_test_acc} at epoch {best_epoch}')
     # pd.DataFrame({"train_loss":train_loss_list,"test_loss":test_loss_list,"train_acc":train_acc_list,"test_acc":test_acc_list}).to_csv(
     #     experiment_path+'/result/curve.csv')
+    if observe_fi:
+        for epoch in fi_epochs:
+            model.load_state_dict(torch.load(result_weight_path+f'/FI_{first_str}_{epoch}.pth'))
+            FI_Observation(model,train_data_loader,epoch,args.T,device,logging,writer)
     writer.close()
 
 def evaluate(model:torch.nn.Module,test_data_loader:DataLoader,criterion:Any,device:torch.device) -> tuple:

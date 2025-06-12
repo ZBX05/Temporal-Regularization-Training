@@ -3,6 +3,10 @@ import torch.nn.functional as F
 import warnings
 from typing import Any
 from math import exp
+from copy import deepcopy
+from tqdm import tqdm
+from tensorboardX import SummaryWriter
+import logging
 
 warnings.filterwarnings('ignore',category=Warning)
 
@@ -12,17 +16,12 @@ def rectangle(x:torch.Tensor,param:torch.Tensor) -> torch.Tensor:
 
 class ActFun(torch.autograd.Function):
     @staticmethod
-    def forward(ctx,input,surrogate_type,param,m=None):
+    def forward(ctx,input,surrogate_type,param):
         if not isinstance(param,torch.Tensor):
             param=torch.tensor([param],device=input.device)
         ctx.save_for_backward(input,param)
         ctx.in_1=surrogate_type
-        ctx.in_2=m
-        if surrogate_type!='asgl':
-            output=input.gt(0).float()
-        else:
-            h_s=rectangle(input,param)
-            output=h_s+((input.gt(0).float()-h_s)*m).detach()
+        output=input.gt(0).float()
         return output # spike=(mem-self.v_threshold)>0
 
     @staticmethod
@@ -30,30 +29,18 @@ class ActFun(torch.autograd.Function):
         grad_input=grad_output.clone()
         input,param=ctx.saved_tensors
         surrogate_type=ctx.in_1
-        surrogate_m=ctx.in_2
         param=param.item() if param.shape[0]==1 else param
         param_grad=None
         if surrogate_type=='sigmoid':
             sgax=1/(1+torch.exp(-param*input))
             grad_surrogate=param*(1-sgax)*sgax
-        elif surrogate_type=='zo':
-            sample_size=surrogate_m
-            abs_z=torch.abs(torch.randn((sample_size,)+input.size(),device=input.device,dtype=torch.float))
-            t=torch.abs(input[None,:,:])<abs_z*param
-            grad_surrogate=torch.mean(t*abs_z,dim=0)/(2*param)
         elif surrogate_type=='triangle':
             grad_surrogate=(1/param)*(1/param)*((param-input.abs()).clamp(min=0))
-        elif surrogate_type=='pseudo':
-            grad_surrogate=abs(input)<param
-        elif surrogate_type=='asgl':
-            t=torch.abs(input)<1/(2*torch.exp(param))
-            grad_surrogate=t*torch.exp(param)
-            param_grad=t*torch.exp(param)*input*grad_input
         else:
             raise NameError('Surrogate type '+str(surrogate_type)+' is not supported!')
         return grad_surrogate.float()*grad_input,None,param_grad,None
 
-def REG_Loss(model:torch.nn.Module,outputs:torch.Tensor,labels:torch.Tensor,criterion:Any,decay:float,lamb:float,epsilon:float,
+def TRT_Loss(model:torch.nn.Module,outputs:torch.Tensor,labels:torch.Tensor,criterion:Any,decay:float,lamb:float,epsilon:float,
              eta:float=0.05) -> torch.Tensor:
     T=outputs.size(1)
     loss=0
@@ -69,10 +56,128 @@ def REG_Loss(model:torch.nn.Module,outputs:torch.Tensor,labels:torch.Tensor,crit
                 reg+=torch.sum(param**2*decay_factor)
         if eta!=0:
             sup_loss=mse_loss(outputs[:,t,...].float(),labels_one_hot)
-            # sup_loss+=mse_loss(outputs[:,t,...].float(),labels_one_hot)
-        # loss+=label_loss+reg
         loss+=(1-eta)*label_loss+eta*sup_loss+reg
-    # if eta!=0:
-        # loss=(1-eta)*loss+eta*sup_loss
     loss=loss/T
     return loss
+
+def TET_Loss(outputs:torch.Tensor,labels:torch.Tensor,criterion:Any,means:float,lamb:float) -> torch.Tensor:
+    T=outputs.size(1)
+    Loss_es=0
+    for t in range(T):
+        Loss_es+=criterion(outputs[:,t,...],labels)
+    Loss_es=Loss_es/T # L_TET
+    if lamb!=0:
+        MMDLoss=torch.nn.MSELoss()
+        y=torch.zeros_like(outputs).fill_(means)
+        Loss_mmd=MMDLoss(outputs, y) # L_mse
+    else:
+        Loss_mmd=0
+    return (1-lamb)*Loss_es+lamb*Loss_mmd # L_Total
+
+def FI_Observation(model:torch.nn.Module,train_data_loader:torch.utils.data.DataLoader,epoch:int,T:int,device:torch.device,logging:logging,
+                   writer:SummaryWriter) -> None:
+    print('Start to calculate the Fisher Information in epoch {:3d}'.format(epoch))
+    logging.info('Start to calculate the Fisher Information in epoch {:3d}'.format(epoch))
+    # fisherlist=[[] for _ in range(T)]
+    ep_fisher_list=[]
+    N=len(train_data_loader.dataset)
+    for t in range(1,T+1):
+        params={n:p for n,p in model.named_parameters() if p.requires_grad}
+        precision_matrices={}
+        for n,p in deepcopy(params).items():
+            p.data.zero_()
+            precision_matrices[n] = p.data
+        model.eval()
+
+        for step,(img,labels) in enumerate(tqdm(train_data_loader)):
+            model.zero_grad()
+            img=img.to(device)
+            labels=labels.to(device)
+            output=model(img,True)
+            loss=F.nll_loss(F.log_softmax(torch.sum(output[:,:t,...],dim=1)/t,dim=1),labels)
+            loss.backward()
+
+            for n,p in model.named_parameters():
+                if p.grad is not None:
+                    precision_matrices[n].data+=p.grad.data**2/100
+
+            if step==100:
+                break
+
+        precision_matrices={n:p for n,p in precision_matrices.items()}
+        fisher_trace_info=0
+        for p in precision_matrices:
+            weight=precision_matrices[p]
+            fisher_trace_info+=weight.sum()
+        # fisher_trace_info/=N
+
+        print('Time: {:2d} | FisherInfo: {:4f}'.format(t,fisher_trace_info))
+        logging.info('Time: {:2d} | FisherInfo: {:4f}'.format(t,fisher_trace_info))
+        # fisherlist[t-1].append(float(fisher_trace_info.cpu().data.numpy()))
+        ep_fisher_list.append(float(fisher_trace_info.cpu().data.numpy()))
+        writer.add_scalar(f'fisher_trace_info_curve_{epoch}',ep_fisher_list[-1],t)
+
+        print('Fisher list: ',ep_fisher_list)
+        logging.info('Fisher list: '+str(ep_fisher_list))
+
+def IC_Observation(model:torch.nn.Module,train_data_loader:torch.utils.data.DataLoader,epoch:int,T:int,device:torch.device,logging:logging,
+                   writer:SummaryWriter) -> None:
+    print('Start to calculate the IC in epoch {:3d}'.format(epoch))
+    logging.info('Start to calculate the IC in epoch {:3d}'.format(epoch))
+    # fisherlist=[[] for _ in range(T)]
+    ep_fisher_list=[]
+    N=len(train_data_loader.dataset)
+    t_i=0
+    i=0
+    for t in range(1,T+1):
+        params={n:p for n,p in model.named_parameters() if p.requires_grad}
+        precision_matrices={}
+        for n,p in deepcopy(params).items():
+            p.data.zero_()
+            precision_matrices[n] = p.data
+        model.eval()
+
+        for step,(img,labels) in enumerate(tqdm(train_data_loader)):
+            model.zero_grad()
+            img=img.to(device)
+            labels=labels.to(device)
+            output=model(img,True)
+            loss=F.nll_loss(F.log_softmax(torch.sum(output[:,:t,...],dim=1)/t,dim=1),labels)
+            loss.backward()
+
+            for n,p in model.named_parameters():
+                if p.grad is not None:
+                    precision_matrices[n].data+=p.grad.data**2/100
+
+            if step==100:
+                break
+
+        precision_matrices={n:p for n,p in precision_matrices.items()}
+        fisher_trace_info=0
+        for p in precision_matrices:
+            weight=precision_matrices[p]
+            fisher_trace_info+=weight.sum()
+        # fisher_trace_info/=N
+
+        # print('Time: {:2d} | FisherInfo: {:4f}'.format(t,fisher_trace_info))
+        # logging.info('Time: {:2d} | FisherInfo: {:4f}'.format(t,fisher_trace_info))
+        # fisherlist[t-1].append(float(fisher_trace_info.cpu().data.numpy()))
+        fi=float(fisher_trace_info.cpu().data.numpy())
+        ep_fisher_list.append(fi)
+        t_i+=t*fi
+        i+=fi
+
+    # print('Fisher list: ',ep_fisher_list)
+    # logging.info('Fisher list: '+str(ep_fisher_list))
+
+    # ic=[]
+    # t_i=0
+    # i=0
+    # for t in range(1,T+1):
+    #     i+=ep_fisher_list[t-1]
+    #     t_i+=t*ep_fisher_list[t-1]
+    #     ic.append(t_i/i)
+    #     writer.add_scalar(f'ic',ic[-1],epoch)
+    ic=t_i/i
+    writer.add_scalar(f'ic',ic,epoch)
+    print('IC: ',ic)
