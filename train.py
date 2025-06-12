@@ -19,7 +19,7 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
     norm_str=args.norm+'_' if args.norm!='No' and 'CONV' in args.topology else ''
     topology=args.model if args.model!='Custom' else args.topology
     first_str='T'+str(args.T)+'_'+args.surrogate_type+f'_{norm_str}'+topology
-    if args.regloss:
+    if args.trtloss:
         first_str=f'TRT({args.criterion})_'+first_str
     else:
         first_str=args.criterion+'_'+first_str
@@ -90,8 +90,8 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
          amp=True
          scaler=GradScaler(device='cuda' if not args.cpu else 'cpu')
     
-    reg_loss=args.regloss
-    if reg_loss:
+    trt_loss=args.trtloss
+    if trt_loss:
         loss_lambda=args.loss_lambda
         loss_decay=args.loss_decay
         loss_epsilon=args.loss_epsilon
@@ -157,9 +157,9 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
             optimizer.zero_grad()
             if amp:
                 with torch.amp.autocast(device_type='cuda' if not args.cpu else 'cpu'):
-                    if reg_loss or tet_loss:
+                    if trt_loss or tet_loss:
                         output=model(img,True)
-                        if reg_loss:
+                        if trt_loss:
                             loss=TRT_Loss(model,output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
                         elif tet_loss:
                             loss=TET_Loss(output,labels,criterion,tet_means,tet_lambda)
@@ -180,9 +180,9 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
                     scaler.step(optimizer)
                     scaler.update()
             else:
-                if reg_loss or tet_loss:
+                if trt_loss or tet_loss:
                     output=model(img,True)
-                    if reg_loss:
+                    if trt_loss:
                         loss=TRT_Loss(model,output,labels,criterion,loss_decay,loss_lambda,loss_epsilon,loss_eta)
                     elif tet_loss:
                         loss=TET_Loss(output,labels,criterion,tet_means,tet_lambda)
