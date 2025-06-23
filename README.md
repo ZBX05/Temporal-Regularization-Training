@@ -1,6 +1,6 @@
 # Temporal Regularization Training
 
-Here is the PyTorch implementation for paper **Enhancing Generalization of Spiking Neural Networks Through Temporal Regularization Training**.
+Here is the PyTorch implementation for paper **Enhancing Generalization of Spiking Neural Networks Through Temporal Regularization**.
 
 ## Requirements
 
