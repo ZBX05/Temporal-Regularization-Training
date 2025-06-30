@@ -53,8 +53,8 @@ Spiking Neural Networks (SNNs) have received widespread attention due to their e
 We apply the following smooth function to the data of learning curves and accuracy curves before plotting.  
 
 ```python
-def smooth(data_path, weight=0.5):
-    data = pd.read_csv(filepath_or_buffer=csv_path, header=0, names=['Step','Value'], dtype={'Step' : np.int64, 'Value' : np.float64})
+def smooth(data_path:str, weight:int=0.5) -> list[np.float64]:
+    data = pd.read_csv(filepath_or_buffer=data_path, header=0, names=['Step','Value'], dtype={'Step' : np.int64, 'Value' : np.float64})
     scalar = data['Value'].values
     last = scalar[0]
     smoothed = []
