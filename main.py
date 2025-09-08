@@ -144,14 +144,6 @@ def main():
     assert args.tau>=1,'tau must be greater than or equal to 1.0.'
     assert not(args.trtloss and args.criterion=='MSE'),'MSE is not supported in TET.'
 
-    args.weight_decay=None
-    if args.l1!=0 and args.l2!=0:
-        raise ValueError('Only one type of weight decay can be used in one experiment!')
-    if args.l1:
-        args.weight_decay={"type":'l1',"decay":args.l1}
-    elif args.l2:
-        args.weight_decay={"type":'l2',"decay":args.l2}
-
     model=SNN(args.topology,args.T,input_shape,args.dropout,args.norm,args.v_threshold,args.v_reset,args.tau,args.surrogate_type,
               surrogate_param,args.expend_time,args.init)
     if args.parallel:

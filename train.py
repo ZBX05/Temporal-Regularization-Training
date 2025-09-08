@@ -112,11 +112,6 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
     if args.observe_ic:
         observe_ic=True
     
-    weight_decay=False
-    if args.weight_decay is not None:
-        weight_decay=True
-        decay_dict=args.weight_decay
-    
     if args.mean_reduce:
         get_backward_loss=lambda loss:loss.mean()
     else:
@@ -167,14 +162,7 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
                     else:
                         output=model(img)
                         loss=criterion(output,labels)
-                        if weight_decay:
-                            if decay_dict["type"]=='l1':
-                                norm=lambda x:torch.sum(torch.abs(x))
-                            elif decay_dict["type"]=='l2':
-                                norm=lambda x:torch.sum(x**2)
-                            for name,param in model.named_parameters():
-                                if 'weight' in name:
-                                    loss+=decay_dict["decay"]*norm(param)
+
                     loss=get_backward_loss(loss)
                     scaler.scale(loss).backward()
                     scaler.step(optimizer)
@@ -190,14 +178,7 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
                 else:
                     output=model(img)
                     loss=criterion(output,labels)
-                    if weight_decay:
-                        if decay_dict["type"]=='l1':
-                            norm=lambda x:torch.sum(torch.abs(x))
-                        elif decay_dict["type"]=='l2':
-                            norm=lambda x:torch.sum(x**2)
-                        for name,param in model.named_parameters():
-                            if 'weight' in name:
-                                loss+=decay_dict["decay"]*norm(param)
+                
                 loss=get_backward_loss(loss)
                 loss.backward()
                 optimizer.step()
