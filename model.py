@@ -219,9 +219,12 @@ class SNN(nn.Module):
         spike_patterns=[]
         handles=[]
         neuron_hook=lambda module,input,output:spike_patterns.append(output.detach())
-        for i in range(len(self.layers)):
-            if hasattr(self.layers[i],'lif'):
-                handles.append(self.layers[i].lif.register_forward_hook(neuron_hook))
+        for n,m in self.layers.named_modules():
+            if isinstance(m,LIFNode):
+                handles.append(m.register_forward_hook(neuron_hook))
+        # for i in range(len(self.layers)):
+        #     if hasattr(self.layers[i],'lif'):
+        #         handles.append(self.layers[i].lif.register_forward_hook(neuron_hook))
         with torch.no_grad():
             output=self.forward(input,full_output)
         for handle in handles:
