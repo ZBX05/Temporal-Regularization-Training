@@ -6,6 +6,7 @@ sys.path.append(root_path)
 
 from model import SNN
 from train import *
+from train_distribute import *
 from dataset import *
 import argparse
 import random
@@ -16,10 +17,11 @@ def main():
     # Device
     parser.add_argument('--cpu',type=int,default=0,help='Disable CUDA and run on CPU.')
     parser.add_argument('--parallel',type=int,default=0,help='Whither to use multiple GPUs.')
+    parser.add_argument('--distribute',type=int,default=0,help='Whither to use distributed training. Default: False.')
     parser.add_argument('--gpu',type=str,default='0',help='GPU(s) ID. When using parallel training, the IDs must be specified as a string of comma-separated integers, like 0-1-2-3. Default: 0.')
     parser.add_argument('--seed',type=int,default=42,help='Random seed. Default: 42.')
     # Dataset
-    parser.add_argument('--dataset',type=str,choices=['CIFAR10','CIFAR100','DVSCIFAR10','ImageNet100','NCaltech101'],default='CIFAR10',help='Choice of the dataset: CIFAR10 (CIFAR10), CIFAR100 (CIFAR100), ImageNet100 (ImageNet100), DVS-CIFAR10 (DVSCIFAR10), N-Caltech101 (NCaltech101). Default: CIFAR10.')
+    parser.add_argument('--dataset',type=str,choices=['CIFAR10','CIFAR100','DVSCIFAR10','ImageNet100','ImageNet1K','NCaltech101'],default='CIFAR10',help='Choice of the dataset: CIFAR10 (CIFAR10), CIFAR100 (CIFAR100), ImageNet100 (ImageNet100), DVS-CIFAR10 (DVSCIFAR10), N-Caltech101 (NCaltech101). Default: CIFAR10.')
     parser.add_argument('--augment',type=int,default=1,help='Whether to use cutout for CIFAR-10 and CIFAR10-DVS. Default: True.')
     #Training
     parser.add_argument('--save_checkpoint',type=int,default=0,help='Whether to save the checkpoints. Default: False.')
@@ -30,6 +32,7 @@ def main():
     parser.add_argument('--optimizer',choices=['SGD','AdamW','Adam','RMSprop'],default='Adam',help='Choice of the optimizer - stochastic gradient descent with 0.9 momentum (SGD), SGD with 0.9 momentum and AdamW (AdamW), Adam (Adam), and RMSprop (RMSprop). Default: AdamW.')
     parser.add_argument('--l1',type=float,default=0,help='L1 regularization coefficient. Default: 0.')
     parser.add_argument('--l2',type=float,default=0,help='L2 regularization coefficient. Default: 0.')
+    parser.add_argument('--weight_decay',type=float,default=0,help='Weight decay. Default: 0.')
     parser.add_argument('--criterion',choices=['MSE','BCE','CE'], default='CE',help='Choice of criterion (loss function) - mean squared error (MSE), binary cross entropy (BCE), cross entropy (CE, which already contains a logsoftmax activation function). Default: MSE.')
     parser.add_argument('--tetloss',type=int,default=0,help='Whether to use the Temporal Efficient Training method. Default: False.')
     parser.add_argument('--loss_means',type=float,default=1.0,help='Hyperparameter for TET. Recommend equal to the value of v_threshold. Default: 1.0.')
@@ -132,6 +135,17 @@ def main():
             # args.expend_time=False
             args.model='SEW-ResNet-34'
             args.topology=f'CONV-64-7-2-3-3-2-1_SEWRES~ADD-64-3=3-1=1-1=1_SEWRES~ADD-64-3=3-1=1-1=1_SEWRES~ADD-64-3=3-1=1-1=1_SEWRES~ADD-128-3=3-2=1-1=1_SEWRES~ADD-128-3=3-1=1-1=1_SEWRES~ADD-128-3=3-1=1-1=1_SEWRES~ADD-128-3=3-1=1-1=1_SEWRES~ADD-256-3=3-2=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-512-3=3-2=1-1=1_SEWRES~ADD-512-3=3-1=1-1=1_SEWRES~ADD-512-3=3-1=1-1=1-_L-{args.label_size}'
+    elif args.dataset=='ImageNet1K':
+        train_data_loader,test_data_loader,input_shape=load_dataset_imagenet100(experiment_path+'/data',args.batch_size,True)
+        args.label_size=1000
+        args.expend_time=True
+        if args.topology=='ResNet-34':
+            args.model='ResNet-34'
+            args.topology=f'CONV-64-7-2-3-3-2-1_RES-64-3=3-1=1-1=1_RES-64-3=3-1=1-1=1_RES-64-3=3-1=1-1=1_RES-128-3=3-2=1-1=1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-128-3=3-1=1-1=1_RES-256-3=3-2=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-256-3=3-1=1-1=1_RES-512-3=3-2=1-1=1_RES-512-3=3-1=1-1=1_RES-512-3=3-1=1-1=1-_L-{args.label_size}'
+        if args.topology=='SEW-ResNet-34':
+            # args.expend_time=False
+            args.model='SEW-ResNet-34'
+            args.topology=f'CONV-64-7-2-3-3-2-1_SEWRES~ADD-64-3=3-1=1-1=1_SEWRES~ADD-64-3=3-1=1-1=1_SEWRES~ADD-64-3=3-1=1-1=1_SEWRES~ADD-128-3=3-2=1-1=1_SEWRES~ADD-128-3=3-1=1-1=1_SEWRES~ADD-128-3=3-1=1-1=1_SEWRES~ADD-128-3=3-1=1-1=1_SEWRES~ADD-256-3=3-2=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-256-3=3-1=1-1=1_SEWRES~ADD-512-3=3-2=1-1=1_SEWRES~ADD-512-3=3-1=1-1=1_SEWRES~ADD-512-3=3-1=1-1=1-_L-{args.label_size}'
     else:
         raise ValueError('Unsupported dataset: '+args.dataset+'.')
 
@@ -146,6 +160,9 @@ def main():
 
     model=SNN(args.topology,args.T,input_shape,args.dropout,args.norm,args.v_threshold,args.v_reset,args.tau,args.surrogate_type,
               surrogate_param,args.expend_time,args.init)
+    if args.distribute:
+        train_distribute(args,model,train_data_loader,test_data_loader,device,experiment_path)
+        return
     if args.parallel:
         model=torch.nn.DataParallel(model)
     train(args,model,train_data_loader,test_data_loader,device,experiment_path)

@@ -23,6 +23,9 @@ def get_data(path:str,dataset:str,augment:bool=False,T:int=None) -> tuple[Any,An
     elif dataset=='ImageNet100':
         import ImageNet100.dataset
         train_data,test_data=ImageNet100.dataset.get_dataset(path)
+    elif dataset=='ImageNet1K':
+        import ImageNet1K.dataset
+        train_data,test_data=ImageNet1K.dataset.get_dataset(path)
     return train_data,test_data
 
 def get_dataloader(train_data:Any,test_data:Any,batch_size:int,shuffle:bool) -> tuple[DataLoader,DataLoader]:
@@ -62,6 +65,12 @@ def load_dataset_dvscifar10(augment:bool,path:str,batch_size:int,shuffle:bool) -
 
 def load_dataset_imagenet100(path:str,batch_size:int,shuffle:bool) -> tuple[DataLoader,DataLoader,tuple[int,int,int]]:
     train_data,test_data=get_data(path,'ImageNet100')
+    train_loader,test_loader=get_dataloader(train_data,test_data,batch_size,shuffle)
+    data_shape=(3,224,224)
+    return train_loader,test_loader,data_shape
+
+def load_dataset_imagenet1k(path:str,batch_size:int,shuffle:bool) -> tuple[DataLoader,DataLoader,tuple[int,int,int]]:
+    train_data,test_data=get_data(path,'ImageNet1K')
     train_loader,test_loader=get_dataloader(train_data,test_data,batch_size,shuffle)
     data_shape=(3,224,224)
     return train_loader,test_loader,data_shape

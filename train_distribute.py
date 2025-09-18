@@ -7,71 +7,78 @@ import torch.nn.functional as F
 from typing import Any
 from tqdm import tqdm
 from torch.utils.data import DataLoader
+import torch.distributed as dist
+from torch.utils.data.distributed import DistributedSampler
 from tensorboardX import SummaryWriter
 import time
 import logging
 from argparse import Namespace
 from function import TRT_Loss,TET_Loss,FI_Observation,IC_Observation
 
-def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test_data_loader:DataLoader,device:torch.device,
+def train_distribute(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test_data_loader:DataLoader,device:torch.device,
           experiment_path:str) -> None:
+    rank=int(os.environ["RANK"])
+    local_rank=int(os.environ["LOCAL_RANK"])
+    torch.cuda.set_device(rank % torch.cuda.device_count())
+    dist.init_process_group(backend='nccl')
+    device=torch.device('cuda',local_rank)
+    model=torch.nn.parallel.DistributedDataParallel(model,device_ids=[local_rank],output_device=local_rank)
+    train_sampler=DistributedSampler(train_data_loader.dataset,shuffle=True)
+    train_data_loader.sampler=train_sampler
     # first_str=[string for string in filter(lambda x:x!='',re.split(r'[.>\']+',str(type(model))))][-1]
-    norm_str=args.norm+'_' if args.norm!='No' and 'CONV' in args.topology else ''
-    topology=args.model if args.model!='Custom' else args.topology
-    first_str='T'+str(args.T)+'_'+args.surrogate_type+f'_{norm_str}'+topology
-    if args.trtloss:
-        first_str=f'TRT({args.criterion})_'+first_str
-    else:
-        first_str=args.criterion+'_'+first_str
-    if args.resume:
-        checkpoint=torch.load(args.resume_path)
-        epoch_resume=checkpoint["epoch"]
-        first_str=f'Resume_{epoch_resume+1}_'+first_str
-    time_str=time.strftime(r'%Y-%m-%d_%H-%M-%S')
-    result_root_path=experiment_path+'/result/'+first_str+'_'+time_str
-    result_logs_path=experiment_path+'/result/'+first_str+'_'+time_str+'/logs'
-    result_weight_path=experiment_path+'/result/'+first_str+'_'+time_str+'/weights'
-    if not os.path.exists(experiment_path+'/result/'+first_str+time_str):
-        os.makedirs(result_root_path)
-        os.makedirs(result_logs_path)
-        os.makedirs(result_weight_path)
+    if rank==0:
+        norm_str=args.norm+'_' if args.norm!='No' and 'CONV' in args.topology else ''
+        topology=args.model if args.model!='Custom' else args.topology
+        first_str='T'+str(args.T)+'_'+args.surrogate_type+f'_{norm_str}'+topology
+        if args.trtloss:
+            first_str=f'TRT({args.criterion})_'+first_str
+        else:
+            first_str=args.criterion+'_'+first_str
+        if args.resume:
+            checkpoint=torch.load(args.resume_path)
+            epoch_resume=checkpoint["epoch"]
+            first_str=f'Resume_{epoch_resume+1}_'+first_str
+        time_str=time.strftime(r'%Y-%m-%d_%H-%M-%S')
+        result_root_path=experiment_path+'/result/'+first_str+'_'+time_str
+        result_logs_path=experiment_path+'/result/'+first_str+'_'+time_str+'/logs'
+        result_weight_path=experiment_path+'/result/'+first_str+'_'+time_str+'/weights'
+        if not os.path.exists(experiment_path+'/result/'+first_str+time_str):
+            os.makedirs(result_root_path)
+            os.makedirs(result_logs_path)
+            os.makedirs(result_weight_path)
     
-    if args.dataset=='NCaltech101':
-        root_logger=logging.getLogger()
-        for handler in root_logger.handlers[:]:
-            root_logger.removeHandler(handler)
-        logging.basicConfig(
-            level=logging.INFO,
-            handlers=[
-                logging.FileHandler(result_root_path+'/train.log')
-            ]
-        )
-    else:
-        logging.basicConfig(level=logging.INFO,filename=result_root_path+'/train.log',filemode='w')
-    for arg in args._get_kwargs():
-        logging.info(f'{arg[0]}={arg[1]}')
-    logging.info(f'Model structure:\n{model}')
+        if args.dataset=='NCaltech101':
+            root_logger=logging.getLogger()
+            for handler in root_logger.handlers[:]:
+                root_logger.removeHandler(handler)
+            logging.basicConfig(
+                level=logging.INFO,
+                handlers=[
+                    logging.FileHandler(result_root_path+'/train.log')
+                ]
+            )
+        else:
+            logging.basicConfig(level=logging.INFO,filename=result_root_path+'/train.log',filemode='w')
+        for arg in args._get_kwargs():
+            logging.info(f'{arg[0]}={arg[1]}')
+        logging.info(f'Model structure:\n{model}')
 
-    model.to(device)
-    writer=SummaryWriter(result_logs_path)
-    with torch.no_grad():
-        example_input,_=next(iter(train_data_loader))
-        writer.add_graph(model,example_input.to(device))
+    # model.to(device)
+        writer=SummaryWriter(result_logs_path)
+        with torch.no_grad():
+            example_input,_=next(iter(train_data_loader))
+            writer.add_graph(model,example_input.to(device))
     
     epochs=args.epochs
 
-    reg=False
-    if args.l2!=0:
-        reg=True
-
     if args.optimizer=='SGD':
-            optimizer=SGD(model.parameters(),lr=args.lr,momentum=0.9,nesterov=False,weight_decay=args.weight_decay)
+            optimizer=SGD(model.parameters(),lr=args.lr,momentum=0.9,nesterov=False)
     elif args.optimizer=='AdamW':
-            optimizer=AdamW(model.parameters(),lr=args.lr,weight_decay=args.weight_decay)
+            optimizer=AdamW(model.parameters(),lr=args.lr)
     elif args.optimizer=='Adam':
-            optimizer=Adam(model.parameters(),lr=args.lr,weight_decay=args.weight_decay)
+            optimizer=Adam(model.parameters(),lr=args.lr)
     elif args.optimizer=='RMSprop':
-            optimizer=RMSprop(model.parameters(),lr=args.lr,weight_decay=args.weight_decay)
+            optimizer=RMSprop(model.parameters(),lr=args.lr)
     else:
         raise NameError('Optimizer '+str(args.optimizer)+' not supported!')
     
@@ -146,6 +153,7 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
     train_loss_list=[]
     test_loss_list=[]
     for epoch in range(epoch_resume,epochs):
+        train_data_loader.sampler.set_epoch(epoch)
         model.train()
         train_loss=0
         train_acc=0
@@ -166,8 +174,6 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
                     else:
                         output=model(img)
                         loss=criterion(output,labels)
-                        if reg==True:
-                            loss+=args.l2*sum([(p**2).sum() for p in model.parameters()])
 
                     loss=get_backward_loss(loss)
                     scaler.scale(loss).backward()
@@ -184,8 +190,6 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
                 else:
                     output=model(img)
                     loss=criterion(output,labels)
-                    if reg==True:
-                        loss+=args.l2*sum([(p**2).sum() for p in model.parameters()])
                 
                 loss=get_backward_loss(loss)
                 loss.backward()
@@ -195,32 +199,33 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
 
             train_acc+=(output.argmax(1)==labels).float().sum().item()
         test_loss,test_acc=evaluate(model,test_data_loader,criterion,device)
-        if test_acc>best_test_acc or (test_acc==best_test_acc and test_loss<best_test_loss):
-            best_test_acc=test_acc
-            best_test_loss=test_loss
-            best_epoch=epoch+1
-            # torch.save(model.cpu().state_dict(),
-            #            experiment_path+f'/result/{surrogate_type}_{epoch+1}_{test_loss}_{test_acc}.pth')
-            # first_str=model.train_mode+'_'+[string for string in filter(lambda x:x!='',re.split(r'[.>\']+',str(type(model))))][-1]
-            param=args.surrogate_param
-            torch.save(model.cpu().state_dict(),
-                        result_weight_path+f'/{first_str}_{args.surrogate_type}{param}_{epoch+1}_{test_loss}_{test_acc}.pth')
-            model.to(device)
-        if observe_ic:
-            IC_Observation(model,train_data_loader,epoch,args.T,device,logging,writer)
-        if observe_fi and epoch+1 in fi_epochs:
-            torch.save(model.cpu().state_dict(),
-                       result_weight_path+f'/FI_{first_str}_{epoch+1}.pth')
-            model.to(device)
-        if save_checkpoint and epoch+1 in checkpoint_epochs:
-            torch.save({
-                "epoch":epoch,
-                "model_state_dict":model.state_dict(),
-                "optimizer_state_dict":optimizer.state_dict(),
-                "scheduler_state_dict":scheduler.state_dict() if scheduler is not None else None,
-                "loss":loss,
-                "scaler":scaler.state_dict() if amp else None
-            },result_weight_path+f'/checkpoint_{first_str}_{epoch+1}.pth')
+        if rank==0:
+            if test_acc>best_test_acc or (test_acc==best_test_acc and test_loss<best_test_loss):
+                best_test_acc=test_acc
+                best_test_loss=test_loss
+                best_epoch=epoch+1
+                # torch.save(model.cpu().state_dict(),
+                #            experiment_path+f'/result/{surrogate_type}_{epoch+1}_{test_loss}_{test_acc}.pth')
+                # first_str=model.train_mode+'_'+[string for string in filter(lambda x:x!='',re.split(r'[.>\']+',str(type(model))))][-1]
+                param=args.surrogate_param
+                torch.save(model.cpu().state_dict(),
+                           result_weight_path+f'/{first_str}_{args.surrogate_type}{param}_{epoch+1}_{test_loss}_{test_acc}.pth')
+                model.to(device)
+        # if observe_ic:
+        #     IC_Observation(model,train_data_loader,epoch,args.T,device,logging,writer)
+        # if observe_fi and epoch+1 in fi_epochs:
+        #     torch.save(model.cpu().state_dict(),
+        #                result_weight_path+f'/FI_{first_str}_{epoch+1}.pth')
+        #     model.to(device)
+        # if save_checkpoint and epoch+1 in checkpoint_epochs:
+        #     torch.save({
+        #         "epoch":epoch,
+        #         "model_state_dict":model.state_dict(),
+        #         "optimizer_state_dict":optimizer.state_dict(),
+        #         "scheduler_state_dict":scheduler.state_dict() if scheduler is not None else None,
+        #         "loss":loss,
+        #         "scaler":scaler.state_dict() if amp else None
+        #     },result_weight_path+f'/checkpoint_{first_str}_{epoch+1}.pth')
         if scheduler is not None:
             scheduler.step()
         train_loss/=train_samples
@@ -230,23 +235,25 @@ def train(args:Namespace,model:torch.nn.Module,train_data_loader:DataLoader,test
         test_acc_list.append(test_acc)
         test_loss_list.append(test_loss)
         tags=['train_loss','train_acc','test_loss','test_acc']
-        writer.add_scalar(tags[0],train_loss,epoch+1)
-        writer.add_scalar(tags[1],train_acc,epoch+1)
-        writer.add_scalar(tags[2],test_loss,epoch+1)
-        writer.add_scalar(tags[3],test_acc,epoch+1)
-        print('Epoch {:3d}: Train loss: {:4f} | Train acc: {:3f} | Test loss: {:4f} | Test acc: {:3f}'
-              .format(epoch+1,train_loss,train_acc,test_loss,test_acc))
-        logging.info('Epoch {:3d}: Train loss: {:4f} | Train acc: {:3f} | Test loss: {:4f} | Test acc: {:3f}'
-              .format(epoch+1,train_loss,train_acc,test_loss,test_acc))
-    print(f'Best test accuracy: {best_test_acc} at epoch {best_epoch}')
-    logging.info(f'Best test accuracy: {best_test_acc} at epoch {best_epoch}')
+        if rank==0:
+            writer.add_scalar(tags[0],train_loss,epoch+1)
+            writer.add_scalar(tags[1],train_acc,epoch+1)
+            writer.add_scalar(tags[2],test_loss,epoch+1)
+            writer.add_scalar(tags[3],test_acc,epoch+1)
+            print('Epoch {:3d}: Train loss: {:4f} | Train acc: {:3f} | Test loss: {:4f} | Test acc: {:3f}'
+                .format(epoch+1,train_loss,train_acc,test_loss,test_acc))
+            logging.info('Epoch {:3d}: Train loss: {:4f} | Train acc: {:3f} | Test loss: {:4f} | Test acc: {:3f}'
+                .format(epoch+1,train_loss,train_acc,test_loss,test_acc))
+    if rank==0:
+        print(f'Best test accuracy: {best_test_acc} at epoch {best_epoch}')
+        logging.info(f'Best test accuracy: {best_test_acc} at epoch {best_epoch}')
     # pd.DataFrame({"train_loss":train_loss_list,"test_loss":test_loss_list,"train_acc":train_acc_list,"test_acc":test_acc_list}).to_csv(
     #     experiment_path+'/result/curve.csv')
-    if observe_fi:
-        for epoch in fi_epochs:
-            model.load_state_dict(torch.load(result_weight_path+f'/FI_{first_str}_{epoch}.pth'))
-            FI_Observation(model,train_data_loader,epoch,args.T,device,logging,writer)
-    writer.close()
+    # if observe_fi:
+    #     for epoch in fi_epochs:
+    #         model.load_state_dict(torch.load(result_weight_path+f'/FI_{first_str}_{epoch}.pth'))
+    #         FI_Observation(model,train_data_loader,epoch,args.T,device,logging,writer)
+        writer.close()
 
 def evaluate(model:torch.nn.Module,test_data_loader:DataLoader,criterion:Any,device:torch.device) -> tuple:
     model.eval()
